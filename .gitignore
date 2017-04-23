@@ -1,0 +1,7 @@
+.vs
+
+Library
+Builds
+*.csproj
+*.sln
+output_log.txt
