@@ -12,6 +12,9 @@ namespace Multiverse
         public string ip { get; private set; }
         public int port { get; private set; }
 
+        /// <summary>
+        /// Not serialized for client
+        /// </summary>
         public ushort zoneClientId { get; private set; }
 
         public ZoneWorldInfo(ulong worldZoneId, int sceneBuildIndex, string ip, int port, ushort zoneClientId)

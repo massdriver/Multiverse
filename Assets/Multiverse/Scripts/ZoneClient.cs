@@ -9,10 +9,8 @@ namespace Multiverse
     public class ZoneClient : MonoBehaviour, LidgrenClient.IDelegate
     {
         public ulong worldZoneId { get; set; }
-
         public string zoneMasterIp { get; set; }
         public ushort zoneMasterPort { get; set; }
-
         public bool isRegistered { get; private set; }
 
         private LidgrenClient client;
@@ -24,9 +22,20 @@ namespace Multiverse
 
             client = new LidgrenClient();
             client.clientDelegate = this;
-            client.RegisterMessageType<ZmRegisterWorldReply>();
 
-            handler.SetHandler<ZmRegisterWorldReply>(HandleZmRegisterWorldReply);
+            RegisterMessage<ZmRegisterWorldReply>(HandleZmRegisterWorldReply);
+        }
+
+        private void RegisterMessage<T>(NetworkMessageHandler.MessageHandler msgHandler) where T : Message
+        {
+            client.RegisterMessageType<T>();
+            handler.SetHandler<T>(msgHandler);
+        }
+
+        private void Update()
+        {
+            if (client != null)
+                client.Update();
         }
 
         private void HandleZmRegisterWorldReply(Message m)

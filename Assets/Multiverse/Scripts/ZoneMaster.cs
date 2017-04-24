@@ -22,9 +22,23 @@ namespace Multiverse
 
             server = new LidgrenServer();
             server.serverDelegate = this;
-            server.RegisterMessageType<ZcRegisterWorld>();
-
             zones = new Dictionary<ulong, ZoneWorldInfo>();
+
+            RegisterMessage<ZcRegisterWorld>(HandleZcRegisterWorld);
+        }
+
+        private void RegisterMessage<T>(NetworkMessageHandler.MessageHandler msgHandler) where T : Message
+        {
+            server.RegisterMessageType<T>();
+            handler.SetHandler<T>(msgHandler);
+        }
+
+        public List<ZoneWorldInfo> allZones
+        {
+            get
+            {
+                return zones.Values.ToList();
+            }
         }
 
         private void Update()
@@ -73,6 +87,12 @@ namespace Multiverse
 
         private ZoneWorldInfo ZoneWorldFromClientId(ushort zoneClient)
         {
+            foreach(var kp in zones)
+            {
+                if (kp.Value.zoneClientId == zoneClient)
+                    return kp.Value;
+            }
+
             return null;
         }
 
