@@ -5,3 +5,4 @@ Builds
 *.csproj
 *.sln
 output_log.txt
+Temp
