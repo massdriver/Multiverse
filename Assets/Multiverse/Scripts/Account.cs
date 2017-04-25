@@ -7,10 +7,9 @@ namespace Multiverse
 {
     public class Account
     {
-        public ulong id { get; private set; }
-
-        private List<Character> characters { get; set; }
-
-
+        public ulong id { get; set; }
+        public string email { get; set; }
+        public string passwordHash { get; set; }
+        public DateTime dateCreated { get; set; }
     }
 }

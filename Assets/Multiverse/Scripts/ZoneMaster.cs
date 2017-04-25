@@ -15,8 +15,18 @@ namespace Multiverse
         private LidgrenServer server { get; set; }
         private NetworkMessageHandler handler { get; set; }
 
+        public const ushort ZoneMasterPort = 10333;
+        public const ushort MaxZones = 32;
+
+        public static ZoneMaster singleton { get; private set; }
+
         private void Awake()
         {
+            if (singleton != null)
+                throw new InvalidOperationException("ZoneMaster script already present on scene, only one allowed");
+
+            singleton = this;
+
             handler = new NetworkMessageHandler();
             handler.SetHandler<ZcRegisterWorld>(HandleZcRegisterWorld);
 
@@ -25,6 +35,13 @@ namespace Multiverse
             zones = new Dictionary<ulong, ZoneWorldInfo>();
 
             RegisterMessage<ZcRegisterWorld>(HandleZcRegisterWorld);
+        }
+
+        public void StartZoneMaster()
+        {
+            server.Start(ZoneMasterPort, MaxZones, ZoneSessionName, 1000);
+
+            OnZoneMasterStarted();
         }
 
         private void RegisterMessage<T>(NetworkMessageHandler.MessageHandler msgHandler) where T : Message
@@ -99,6 +116,11 @@ namespace Multiverse
         //
         // Events
         //
+        public virtual void OnZoneMasterStarted()
+        {
+
+        }
+
         public virtual void OnZoneRegistered(ZoneWorldInfo info)
         {
 

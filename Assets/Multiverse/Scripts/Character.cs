@@ -7,7 +7,7 @@ namespace Multiverse
 {
     public class Character
     {
-        public ulong id { get; private set; }
-        public string zone { get; private set; }
+        public ulong id { get; set; }
+        public string zone { get; set; }
     }
 }

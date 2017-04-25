@@ -52,4 +52,28 @@ namespace Multiverse
             msg.Write(sessionId);
         }
     }
+
+    public sealed class LcRequestCreateAccount : Message
+    {
+        public string login { get; set; }
+        public string email { get; set; }
+        public string passwordHash { get; set; }
+        public string promotionCode { get; set; }
+
+        public override void Read(NetBuffer msg)
+        {
+            login = msg.ReadString();
+            email = msg.ReadString();
+            passwordHash = msg.ReadString();
+            promotionCode = msg.ReadString();
+        }
+
+        public override void Write(NetBuffer msg)
+        {
+            msg.Write(login);
+            msg.Write(email);
+            msg.Write(passwordHash);
+            msg.Write(promotionCode);
+        }
+    }
 }

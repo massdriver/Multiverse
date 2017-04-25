@@ -7,8 +7,8 @@ namespace Multiverse
 {
     public sealed class LoginSession
     {
-        public ushort clientId { get; private set; }
-        public ulong sessionId { get; private set; }
+        public ushort clientId { get; set; }
+        public ulong sessionId { get; set; }
 
         public Account account { get; set; }
         public Character activeCharacter { get; set; }
@@ -18,23 +18,29 @@ namespace Multiverse
     {
         public static readonly string LoginSession = "Loginz";
 
-        private ZoneMaster zoneMaster { get; set; }
         private LidgrenServer server { get; set; }
         private NetworkMessageHandler handler { get; set; }
+        private Dictionary<ushort, LoginSession> loginSessions { get; set; }
 
         private void Awake()
         {
-            zoneMaster = GetComponent<ZoneMaster>();
+            loginSessions = new Dictionary<ushort, Multiverse.LoginSession>();
 
             server = new LidgrenServer();
             server.serverDelegate = this;
 
             RegisterMessage<LcRequestLogin>(HandleLcRequestLogin);
+            RegisterMessage<LcRequestCreateAccount>(HandleLcRequestCreateAccount);
+        }
+
+        private void HandleLcRequestCreateAccount(Message m)
+        {
+
         }
 
         private void HandleLcRequestLogin(Message m)
         {
-
+            LcRequestLogin msg = m as LcRequestLogin;
         }
 
         private void RegisterMessage<T>(NetworkMessageHandler.MessageHandler msgHandler) where T : Message
@@ -55,12 +61,35 @@ namespace Multiverse
 
         public void OnServerMessageReceived(LidgrenServer server, ushort sourceClient, Message msg)
         {
-            throw new NotImplementedException();
+            handler.HandleMessage(msg);
+        }
+
+        private ulong sessionIdGen = 123;
+
+        private ulong nextSessionId
+        {
+            get
+            {
+                return sessionIdGen++;
+            }
+        }
+
+        private LoginSession AllocateLoginSession()
+        {
+            LoginSession ls = new Multiverse.LoginSession();
+
+            ls.sessionId = nextSessionId;
+
+            return ls;
         }
 
         //
         // Events
         //
+        public virtual bool OnAllowCreateAccount()
+        {
+            return false;
+        }
 
         public virtual void OnClientConnected(ushort newClientID)
         {

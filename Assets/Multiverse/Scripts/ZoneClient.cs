@@ -10,7 +10,7 @@ namespace Multiverse
     {
         public ulong worldZoneId { get; set; }
         public string zoneMasterIp { get; set; }
-        public ushort zoneMasterPort { get; set; }
+        //public ushort zoneMasterPort { get; set; }
         public bool isRegistered { get; private set; }
 
         private LidgrenClient client;
@@ -45,9 +45,10 @@ namespace Multiverse
             OnZoneClientRegistered(isRegistered);
         }
 
-        public void StartZoneClient()
+        public void StartZoneClient(bool connectToLocalHost)
         {
-            client.Connect(zoneMasterIp, zoneMasterPort, ZoneMaster.ZoneSessionName);
+            string finalIp = connectToLocalHost ? "127.0.0.1" : zoneMasterIp;
+            client.Connect(finalIp, ZoneMaster.ZoneMasterPort, ZoneMaster.ZoneSessionName);
             OnZoneClientStart();
         }
 
