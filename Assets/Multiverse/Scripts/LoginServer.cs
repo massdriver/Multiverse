@@ -35,7 +35,17 @@ namespace Multiverse
 
         private void HandleLcRequestCreateAccount(Message m)
         {
+            LcRequestCreateAccount msg = m as LcRequestCreateAccount;
 
+            if (!OnPreAllowCreateAccount(msg.login, msg.passwordHash, msg.email, msg.promotionCode))
+            {
+                server.Send(msg.sourceClient, new LsCreateAccountReply(false), Lidgren.Network.NetDeliveryMethod.ReliableOrdered);
+            }
+
+            // Create account inside database first
+            //
+
+            server.Send(msg.sourceClient, new LsCreateAccountReply(true), Lidgren.Network.NetDeliveryMethod.ReliableOrdered);
         }
 
         private void HandleLcRequestLogin(Message m)
@@ -86,7 +96,7 @@ namespace Multiverse
         //
         // Events
         //
-        public virtual bool OnAllowCreateAccount()
+        public virtual bool OnPreAllowCreateAccount(string login, string passwordHash, string email, string promotionCode)
         {
             return false;
         }

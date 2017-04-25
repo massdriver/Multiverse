@@ -53,6 +53,31 @@ namespace Multiverse
         }
     }
 
+    public sealed class LsCreateAccountReply : Message
+    {
+        public bool success { get; set; }
+
+        public LsCreateAccountReply()
+        {
+
+        }
+
+        public LsCreateAccountReply(bool success)
+        {
+            this.success = success;
+        }
+
+        public override void Read(NetBuffer msg)
+        {
+            success = msg.ReadBoolean();
+        }
+
+        public override void Write(NetBuffer msg)
+        {
+            msg.Write(success);
+        }
+    }
+
     public sealed class LcRequestCreateAccount : Message
     {
         public string login { get; set; }
