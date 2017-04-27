@@ -7,10 +7,15 @@ namespace Multiverse
 {
     public class Account
     {
-        public ulong id { get; set; }
-        public string login { get; set; }
-        public string email { get; set; }
-        public string passwordHash { get; set; }
-        public DateTime dateCreated { get; set; }
+        [LiteDB.BsonId]
+        public ulong id;
+        public string login;
+        public string email;
+        public string passwordHash;
+        public string promoCode;
+        public DateTime dateCreated;
+
+        public ulong premiumCurrency;
+        public DateTime premiumSubscription;
     }
 }

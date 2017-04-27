@@ -2,12 +2,25 @@
 using System.Collections.Generic;
 using System.Linq;
 using System.Text;
+using Lidgren.Network;
 
 namespace Multiverse
 {
-    public class Character
+    public class Character : INetBufferSerializable
     {
-        public ulong id { get; set; }
-        public string zone { get; set; }
+        [LiteDB.BsonId]
+        public ulong id;
+        public string nickname;
+        public string zone;
+
+        public void Deserialize(NetBuffer msg)
+        {
+            throw new NotImplementedException();
+        }
+
+        public void Serialize(NetBuffer msg)
+        {
+            throw new NotImplementedException();
+        }
     }
 }
