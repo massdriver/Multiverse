@@ -40,6 +40,17 @@ namespace Multiverse
         public bool authorized { get; set; }
         public ulong sessionId { get; set; }
 
+        public LsLoginReply()
+        {
+
+        }
+
+        public LsLoginReply(bool authorized, ulong sessionId)
+        {
+            this.authorized = authorized;
+            this.sessionId = sessionId;
+        }
+
         public override void Read(NetBuffer msg)
         {
             authorized = msg.ReadBoolean();
