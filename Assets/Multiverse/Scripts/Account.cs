@@ -8,7 +8,7 @@ namespace Multiverse
     public class Account
     {
         [LiteDB.BsonId]
-        public ulong id;
+        public long id;
         public string login;
         public string email;
         public string passwordHash;

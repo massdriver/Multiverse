@@ -9,7 +9,7 @@ namespace Multiverse
     public class Character : INetBufferSerializable
     {
         [LiteDB.BsonId]
-        public ulong id;
+        public long id;
         public string nickname;
         public string zone;
 
