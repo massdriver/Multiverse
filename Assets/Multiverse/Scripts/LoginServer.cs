@@ -31,19 +31,39 @@ namespace Multiverse
         private Dictionary<ushort, LoginSession> activeSessions;
         private AccountDatabase accountDatabase;
 
+        public ushort maxClients = 128;
+
+        public const ushort LoginServerPort = 16543;
+
         private void Awake()
         {
             accountDatabase = GetComponent<AccountDatabase>();
-
             activeSessions = new Dictionary<ushort, Multiverse.LoginSession>();
-
             server = new LidgrenServer();
             server.serverDelegate = this;
-
             handler = new NetworkMessageHandler();
-
             RegisterMessage<LcRequestLogin>(HandleLcRequestLogin);
             RegisterMessage<LcRequestCreateAccount>(HandleLcRequestCreateAccount);
+        }
+
+        public void StartLoginServer()
+        {
+            server.Start(LoginServerPort, maxClients, LoginSession, 5000);
+            OnLoginServerStarted();
+        }
+
+        public void StopLoginServer()
+        {
+            server.Update();
+            server.Stop();
+
+            OnLoginServerStopped();
+        }
+
+        private void Update()
+        {
+            if (server != null)
+                server.Update();
         }
 
         private void HandleLcRequestCreateAccount(Message m)
@@ -58,6 +78,8 @@ namespace Multiverse
             bool result = accountDatabase.CreateAccount(msg.login, msg.passwordHash, msg.email, msg.promotionCode);
 
             server.Send(msg.sourceClient, new LsCreateAccountReply(result), Lidgren.Network.NetDeliveryMethod.ReliableOrdered);
+
+            OnAccountCreated(msg.login, msg.passwordHash, msg.email, msg.promotionCode);
         }
 
         private void HandleLcRequestLogin(Message m)
@@ -76,6 +98,7 @@ namespace Multiverse
             activeSessions.Add(msg.sourceClient, newSession);
 
             server.Send(msg.sourceClient, new LsLoginReply(false, newSession.sessionId), Lidgren.Network.NetDeliveryMethod.ReliableOrdered);
+
         }
 
         private void RegisterMessage<T>(NetworkMessageHandler.MessageHandler msgHandler) where T : Message
@@ -120,6 +143,8 @@ namespace Multiverse
             if (session == null)
                 return;
 
+            OnPreLoginSessionLogout(session);
+
             accountDatabase.UpdateAccount(session.account);
             activeSessions.Remove(clientId);
         }
@@ -143,6 +168,26 @@ namespace Multiverse
         }
 
         public virtual void OnClientDisconnected(ushort leavingClientID)
+        {
+
+        }
+
+        public virtual void OnPreLoginSessionLogout(LoginSession session)
+        {
+
+        }
+
+        public virtual void OnLoginServerStarted()
+        {
+
+        }
+
+        public virtual void OnLoginServerStopped()
+        {
+
+        }
+
+        public virtual void OnAccountCreated(string login, string passwordHash, string email, string promotionCode)
         {
 
         }

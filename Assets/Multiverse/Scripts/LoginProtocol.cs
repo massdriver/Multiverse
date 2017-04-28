@@ -96,6 +96,19 @@ namespace Multiverse
         public string passwordHash { get; set; }
         public string promotionCode { get; set; }
 
+        public LcRequestCreateAccount()
+        {
+
+        }
+
+        public LcRequestCreateAccount(string login, string passwordHash, string email, string promotionCode)
+        {
+            this.login = login;
+            this.email = email;
+            this.passwordHash = passwordHash;
+            this.promotionCode = promotionCode;
+        }
+
         public override void Read(NetBuffer msg)
         {
             login = msg.ReadString();

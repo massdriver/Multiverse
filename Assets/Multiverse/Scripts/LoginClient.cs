@@ -7,19 +7,17 @@ namespace Multiverse
 {
     public class LoginClient : MonoBehaviour, LidgrenClient.IDelegate
     {
-        public string loginServerIp { get; set; }
-        public ushort loginServerPort { get; set; }
+        public string loginServerIp;
+        public ushort loginServerPort;
 
-        private LidgrenClient client { get; set; }
-        private NetworkMessageHandler handler { get; set; }
+        private LidgrenClient client;
+        private NetworkMessageHandler handler;
 
         public bool isConnected { get; private set; }
         public bool isAuthorized { get; private set; }
 
-        public string login { get; private set; }
-        public string passwordHash { get; private set; }
-
         public ulong sessionId { get; private set; }
+        public bool isWatingForCreateAccountReply { get; private set; }
 
         private void Awake()
         {
@@ -32,6 +30,16 @@ namespace Multiverse
             handler = new NetworkMessageHandler();
 
             RegisterMessage<LsLoginReply>(HandleLsLoginReply);
+            RegisterMessage<LsCreateAccountReply>(HandleLsCreateAccountReply);
+        }
+
+        private void HandleLsCreateAccountReply(Message m)
+        {
+            LsCreateAccountReply msg = m as LsCreateAccountReply;
+
+            isWatingForCreateAccountReply = false;
+
+            OnCreateAccountResult(msg.success);
         }
 
         private void HandleLsLoginReply(Message m)
@@ -52,14 +60,44 @@ namespace Multiverse
 
         public void Login(string login, string password)
         {
+            //
+        }
+
+        public void CreateAccount(string login, string passwordHash, string email, string promotionCode)
+        {
+            if (isWatingForCreateAccountReply)
+                return;
+
+            isWatingForCreateAccountReply = true;
+
+            client.Send(new LcRequestCreateAccount(login, passwordHash, email, promotionCode), Lidgren.Network.NetDeliveryMethod.ReliableOrdered);
+        }
+
+        public void StartLoginClient()
+        {
             client.Connect(loginServerIp, loginServerPort, LoginServer.LoginSession);
+        }
+
+        public void StopLoginClient()
+        {
+            client.Disconnect();
+
+            sessionId = 0;
+            isConnected = false;
+            isAuthorized = false;
+            isWatingForCreateAccountReply = false;
+        }
+
+        private void Update()
+        {
+            if(client != null)
+                client.Update();
         }
 
         public void OnClientConnected(LidgrenClient client)
         {
             isConnected = true;
             OnConnected();
-            client.Send(new LcRequestLogin(login, passwordHash), Lidgren.Network.NetDeliveryMethod.ReliableOrdered);
         }
 
         public void OnClientDisconnected(LidgrenClient client)
@@ -94,6 +132,11 @@ namespace Multiverse
         }
 
         public virtual void OnCharacterData(Character character)
+        {
+
+        }
+
+        public virtual void OnCreateAccountResult(bool success)
         {
 
         }
