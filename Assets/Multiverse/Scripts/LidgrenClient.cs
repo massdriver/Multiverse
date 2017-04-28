@@ -117,8 +117,8 @@ namespace Multiverse
         {
             if (client != null)
             {
-                client.Disconnect(null);
-                client.Shutdown(null);
+                client.Disconnect("bye");
+                client.Shutdown("bye");
             }
 
             client = null;

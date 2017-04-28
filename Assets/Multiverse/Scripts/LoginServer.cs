@@ -107,7 +107,7 @@ namespace Multiverse
             {
                 server.Send(msg.sourceClient, new LsCreateAccountReply(false), Lidgren.Network.NetDeliveryMethod.ReliableOrdered);
 
-                Debug.Log("Client failed to authorize");
+
             }
 
             bool result = accountDatabase.CreateAccount(msg.login, msg.passwordHash, msg.email, msg.promotionCode);
@@ -126,6 +126,9 @@ namespace Multiverse
             if(account == null)
             {
                 server.Send(msg.sourceClient, new LsLoginReply(false, 0), Lidgren.Network.NetDeliveryMethod.ReliableOrdered);
+
+                Debug.Log("LoginServer: client failed to authorize");
+
                 return;
             }
 
