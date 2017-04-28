@@ -138,6 +138,7 @@ namespace Multiverse
             {
                 server.Send(msg.sourceClient, new LsLoginReply(false, 0), Lidgren.Network.NetDeliveryMethod.ReliableOrdered);
                 OnClientAuthorizationFailed(msg.sourceClient);
+                Debug.Log("double login");
                 return;
             }
 
@@ -147,6 +148,7 @@ namespace Multiverse
             {
                 server.Send(msg.sourceClient, new LsLoginReply(false, 0), Lidgren.Network.NetDeliveryMethod.ReliableOrdered);
                 OnClientAuthorizationFailed(msg.sourceClient);
+                Debug.Log("account invalid");
                 return;
             }
 
@@ -218,17 +220,17 @@ namespace Multiverse
 
             Debug.Log("LoginServer OnPreAllowCreateAccount: " + "login=" + login + ", passwordHash=" + passwordHash + ", email=" + email + ", promotionCode=" + promotionCode);
 
-            return false;
+            return true;
         }
 
         public virtual void OnNewLoginSession(LoginSession session)
         {
-
+            Debug.Log("Login Server: " + session.ToString());
         }
 
         public virtual void OnClientAuthorizationFailed(ushort client)
         {
-
+            Debug.Log("LoginServer OnClientAuthorizationFailed: " + client);
         }
 
         public virtual void OnClientConnected(ushort newClientID)

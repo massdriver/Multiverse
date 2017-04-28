@@ -16,7 +16,7 @@ namespace Multiverse
         }
 
         private static readonly float WndInset = 5;
-        private static readonly Vector2 LoginWindowSize = new Vector2(200, 300);
+        private static readonly Vector2 LoginWindowSize = new Vector2(200, 400);
         private Rect rectLoginClient = new Rect(new Vector2(200, 200), LoginWindowSize);//Rect.MinMaxRect(0, 250, LoginWindowSize.x, LoginWindowSize.y + 250);
 
         private string login = "";
@@ -60,6 +60,12 @@ namespace Multiverse
                     if (GUILayout.Button("Register"))
                     {
                         loginClient.CreateAccount(login, HashUtil.HashPassword(password), email, promoCode);
+                        showCreateAccount = false;
+
+                        login = "";
+                        password = "";
+                        email = "";
+                        promoCode = "";
                     }
 
                     if (GUILayout.Button("Cancel"))

@@ -5,10 +5,11 @@ using System.Text;
 
 namespace Multiverse
 {
+    [System.Serializable]
     public class Account
     {
         [LiteDB.BsonId]
-        public long id;
+        public int id;
         public string login;
         public string email;
         public string passwordHash;

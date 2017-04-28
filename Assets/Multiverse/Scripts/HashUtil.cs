@@ -39,6 +39,11 @@ namespace Multiverse
             return (long)FromString64(str);
         }
 
+        public static int MakeInt32(string str)
+        {
+            return (int)FromString(str);
+        }
+
         public static ulong FromString64(string str)
         {
             return FromBytes64(Encoding.ASCII.GetBytes(str));

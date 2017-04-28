@@ -24,6 +24,7 @@ namespace Multiverse
 
             database = new LiteDatabase(databaseFilePath);
             accountCollection = database.GetCollection<Account>();
+            accountCollection.EnsureIndex("id", true);
         }
 
         public bool CreateAccount(string login, string passwordHash, string email, string promocode)
@@ -34,27 +35,43 @@ namespace Multiverse
                 return false;
 
             Account newAccount = new Account();
-            newAccount.id = HashUtil.Make(login);
+            newAccount.id = HashUtil.MakeInt32(login);
+            newAccount.login = login;
             newAccount.email = email;
             newAccount.passwordHash = passwordHash;
             newAccount.promoCode = promocode;
             newAccount.dateCreated = DateTime.Now;
 
-            accountCollection.Insert(newAccount);
+            BsonValue val = accountCollection.Insert(newAccount);
+
+            Debug.Log("Account Database: account created, id=" + newAccount.id + ", val=" + val.ToString());
 
             return true;
         }
 
         public Account GetAccount(string login, string passwordHash)
         {
-            Account existing = accountCollection.FindById(new BsonValue(HashUtil.Make(login)));
+            {
+                foreach(Account acc in accountCollection.FindAll())
+                {
+                    Debug.Log("acc id=" + acc.id + ", login=" + acc.login);
+                }
+            }
+
+            Account existing = accountCollection.FindById(new BsonValue(HashUtil.MakeInt32(login)));
 
             if (existing == null)
+            {
+                Debug.Log("Account Database: account not found");
                 return null;
+            }
 
             if (existing.passwordHash == passwordHash)
+            {
                 return existing;
+            }
 
+            Debug.Log("Account Database: account password invalid");
             return null;
         }
 
