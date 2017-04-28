@@ -35,6 +35,24 @@ namespace Multiverse
 
         public const ushort LoginServerPort = 16543;
 
+        public int numConnections
+        {
+            get
+            {
+                return server.activeClientIDs.Length;
+            }
+        }
+
+        public int numSessions
+        {
+            get
+            {
+                return activeSessions.Count;
+            }
+        }
+
+        public bool isRunning { get; private set; }
+
         private void Awake()
         {
             accountDatabase = GetComponent<AccountDatabase>();
@@ -49,13 +67,23 @@ namespace Multiverse
         public void StartLoginServer()
         {
             server.Start(LoginServerPort, maxClients, LoginSession, 5000);
+            isRunning = true;
             OnLoginServerStarted();
         }
 
         public void StopLoginServer()
         {
+            isRunning = false;
             server.Update();
             server.Stop();
+
+            foreach(var kp in activeSessions)
+            {
+                OnPreLoginSessionLogout(kp.Value);
+                accountDatabase.UpdateAccount(kp.Value.account);
+            }
+
+            activeSessions.Clear();
 
             OnLoginServerStopped();
         }
@@ -159,17 +187,19 @@ namespace Multiverse
             // check passwordHash
             // promocode optional
 
+            Debug.Log("LoginServer OnPreAllowCreateAccount: " + "login=" + login + ", passwordHash=" + passwordHash + ", email=" + email + ", promotionCode=" + promotionCode);
+
             return false;
         }
 
         public virtual void OnClientConnected(ushort newClientID)
         {
-
+            Debug.Log("LoginServer OnClientConnected: " + newClientID);
         }
 
         public virtual void OnClientDisconnected(ushort leavingClientID)
         {
-
+            Debug.Log("LoginServer OnClientDisconnected: " + leavingClientID);
         }
 
         public virtual void OnPreLoginSessionLogout(LoginSession session)
@@ -179,17 +209,17 @@ namespace Multiverse
 
         public virtual void OnLoginServerStarted()
         {
-
+            Debug.Log("LoginServer OnLoginServerStarted");
         }
 
         public virtual void OnLoginServerStopped()
         {
-
+            Debug.Log("LoginServer OnLoginServerStopped");
         }
 
         public virtual void OnAccountCreated(string login, string passwordHash, string email, string promotionCode)
         {
-
+            Debug.Log("LoginServer OnAccountCreated: " + "login=" + login + ", passwordHash=" + passwordHash + ", email=" + email + ", promotionCode=" + promotionCode);
         }
     }
 }
