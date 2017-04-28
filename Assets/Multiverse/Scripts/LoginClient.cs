@@ -19,6 +19,8 @@ namespace Multiverse
         public ulong sessionId { get; private set; }
         public bool isWatingForCreateAccountReply { get; private set; }
 
+        public bool isWaitingForAuthorizeReply { get; private set; }
+
         private void Awake()
         {
             isConnected = false;
@@ -49,6 +51,8 @@ namespace Multiverse
             isAuthorized = msg.authorized;
             sessionId = msg.sessionId;
 
+            isWaitingForAuthorizeReply = false;
+
             OnAuthorized(isAuthorized, sessionId);
         }
 
@@ -60,7 +64,17 @@ namespace Multiverse
 
         public void Login(string login, string password)
         {
-            //
+            if (isWaitingForAuthorizeReply || isAuthorized || !isConnected)
+                return;
+
+            isWaitingForAuthorizeReply = true;
+
+            client.Send(new LcRequestLogin(login, HashUtil.HashPassword(password)), Lidgren.Network.NetDeliveryMethod.ReliableOrdered);
+        }
+
+        public void Logout()
+        {
+
         }
 
         public void CreateAccount(string login, string passwordHash, string email, string promotionCode)

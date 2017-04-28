@@ -19,6 +19,11 @@ namespace Multiverse
             this.sessionId = sessionId;
             this.account = account;
         }
+
+        public override string ToString()
+        {
+            return "LoginSession: " + "clientId=" + clientId + ", sessionId=" + sessionId;
+        }
     }
 
     [RequireComponent(typeof(AccountDatabase))]
@@ -33,7 +38,7 @@ namespace Multiverse
 
         public ushort maxClients = 128;
 
-        public const ushort LoginServerPort = 16543;
+        public ushort LoginServerPort = 16543;
 
         public int numConnections
         {
@@ -101,6 +106,8 @@ namespace Multiverse
             if (!OnPreAllowCreateAccount(msg.login, msg.passwordHash, msg.email, msg.promotionCode))
             {
                 server.Send(msg.sourceClient, new LsCreateAccountReply(false), Lidgren.Network.NetDeliveryMethod.ReliableOrdered);
+
+                Debug.Log("Client failed to authorize");
             }
 
             bool result = accountDatabase.CreateAccount(msg.login, msg.passwordHash, msg.email, msg.promotionCode);
@@ -127,6 +134,7 @@ namespace Multiverse
 
             server.Send(msg.sourceClient, new LsLoginReply(false, newSession.sessionId), Lidgren.Network.NetDeliveryMethod.ReliableOrdered);
 
+            OnNewLoginSession(newSession);
         }
 
         private void RegisterMessage<T>(NetworkMessageHandler.MessageHandler msgHandler) where T : Message
@@ -192,6 +200,11 @@ namespace Multiverse
             return false;
         }
 
+        public virtual void OnNewLoginSession(LoginSession session)
+        {
+
+        }
+
         public virtual void OnClientConnected(ushort newClientID)
         {
             Debug.Log("LoginServer OnClientConnected: " + newClientID);
@@ -204,7 +217,7 @@ namespace Multiverse
 
         public virtual void OnPreLoginSessionLogout(LoginSession session)
         {
-
+            Debug.Log("LoginServer LoginSession: " + session.ToString());
         }
 
         public virtual void OnLoginServerStarted()
