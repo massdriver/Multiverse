@@ -79,7 +79,7 @@ namespace Multiverse
 
         public void CreateAccount(string login, string passwordHash, string email, string promotionCode)
         {
-            if (isWatingForCreateAccountReply)
+            if (isWatingForCreateAccountReply || isWatingForCreateAccountReply || !isConnected)
                 return;
 
             isWatingForCreateAccountReply = true;
@@ -100,6 +100,7 @@ namespace Multiverse
             isConnected = false;
             isAuthorized = false;
             isWatingForCreateAccountReply = false;
+            isWaitingForAuthorizeReply = false;
         }
 
         private void Update()

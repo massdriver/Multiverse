@@ -107,7 +107,8 @@ namespace Multiverse
             {
                 server.Send(msg.sourceClient, new LsCreateAccountReply(false), Lidgren.Network.NetDeliveryMethod.ReliableOrdered);
 
-
+                Debug.Log("Login Server: failed to create account");
+                return;
             }
 
             bool result = accountDatabase.CreateAccount(msg.login, msg.passwordHash, msg.email, msg.promotionCode);
@@ -117,18 +118,35 @@ namespace Multiverse
             OnAccountCreated(msg.login, msg.passwordHash, msg.email, msg.promotionCode);
         }
 
+        public bool IsAccountLogged(string login)
+        {
+            foreach(var kp in activeSessions)
+            {
+                if (kp.Value.account.login == login)
+                    return true;
+            }
+
+            return false;
+        }
+
         private void HandleLcRequestLogin(Message m)
         {
             LcRequestLogin msg = m as LcRequestLogin;
+
+            // Do not login twice
+            if(IsAccountLogged(msg.login))
+            {
+                server.Send(msg.sourceClient, new LsLoginReply(false, 0), Lidgren.Network.NetDeliveryMethod.ReliableOrdered);
+                OnClientAuthorizationFailed(msg.sourceClient);
+                return;
+            }
 
             Account account = accountDatabase.GetAccount(msg.login, msg.passwordHash);
 
             if(account == null)
             {
                 server.Send(msg.sourceClient, new LsLoginReply(false, 0), Lidgren.Network.NetDeliveryMethod.ReliableOrdered);
-
-                Debug.Log("LoginServer: client failed to authorize");
-
+                OnClientAuthorizationFailed(msg.sourceClient);
                 return;
             }
 
@@ -204,6 +222,11 @@ namespace Multiverse
         }
 
         public virtual void OnNewLoginSession(LoginSession session)
+        {
+
+        }
+
+        public virtual void OnClientAuthorizationFailed(ushort client)
         {
 
         }

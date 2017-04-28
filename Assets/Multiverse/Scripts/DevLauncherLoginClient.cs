@@ -21,6 +21,8 @@ namespace Multiverse
 
         private string login = "";
         private string password = "";
+        private string email = "";
+        private string promoCode = "";
 
         private void WndLoginClient(int id)
         {
@@ -41,7 +43,32 @@ namespace Multiverse
 
                 GUILayout.Height(15);
 
-                if(loginClient.isWaitingForAuthorizeReply)
+                if (showCreateAccount && !loginClient.isWatingForCreateAccountReply && !loginClient.isWaitingForAuthorizeReply)
+                {
+                    GUILayout.Label("Create new account");
+                    GUILayout.Label("Login");
+                    login = GUILayout.TextField(login);
+                    GUILayout.Label("Password");
+                    password = GUILayout.PasswordField(password, '*');
+                    GUILayout.Label("Email");
+                    email = GUILayout.TextField(email);
+                    GUILayout.Label("Promocode");
+                    promoCode = GUILayout.TextField(email);
+
+                    GUILayout.Height(15);
+
+                    if (GUILayout.Button("Register"))
+                    {
+                        loginClient.CreateAccount(login, HashUtil.HashPassword(password), email, promoCode);
+                    }
+
+                    if (GUILayout.Button("Cancel"))
+                    {
+                        showCreateAccount = false;
+                    }
+                }
+                else
+                if (loginClient.isWaitingForAuthorizeReply)
                 {
                     GUILayout.Label("Loggin in ... ");
                     GUILayout.Button("Abort");
@@ -54,13 +81,19 @@ namespace Multiverse
                     GUILayout.Label("Password");
                     password = GUILayout.PasswordField(password, '*');
 
-                    if(GUILayout.Button("Login"))
+                    if (GUILayout.Button("Login"))
                     {
                         loginClient.Login(login, password);
                         password = "";
                     }
 
                     GUILayout.Height(15);
+
+                    if (GUILayout.Button("Register account"))
+                    {
+                        showCreateAccount = true;
+                    }
+
                 }
 
                 if (GUILayout.Button("Stop Login Client"))
@@ -73,6 +106,8 @@ namespace Multiverse
 
             GUI.DragWindow(Rect.MinMaxRect(0, 0, 10000, 20));
         }
+
+        private bool showCreateAccount;
 
         private void DrawLoginClientControl()
         {
