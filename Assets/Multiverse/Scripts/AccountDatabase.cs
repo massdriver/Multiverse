@@ -11,54 +11,38 @@ namespace Multiverse
     {
         public static readonly string AccountTableName = "accounts";
 
-        public string databaseFilePath;
-        public string password;
+        public string databaseDirectory;
 
-        private LiteDatabase database;
-        private LiteCollection<Account> accountCollection;
+        private FileStorage<Account> accountStorage;
 
         private void Awake()
         {
-            if (databaseFilePath == null || databaseFilePath.Length == 0)
-                throw new InvalidOperationException("database file path was not set");
-
-            database = new LiteDatabase(databaseFilePath);
-            accountCollection = database.GetCollection<Account>();
-            accountCollection.EnsureIndex("id", true);
+            accountStorage = new FileStorage<Account>(databaseDirectory);
         }
 
         public bool CreateAccount(string login, string passwordHash, string email, string promocode)
         {
-            Account existing = accountCollection.FindById(new BsonValue(HashUtil.Make(login)));
+            Account existing = accountStorage.Load(login);
 
             if (existing != null)
                 return false;
 
             Account newAccount = new Account();
-            newAccount.id = HashUtil.MakeInt32(login);
+            newAccount.id = HashUtil.FromString64(login);
             newAccount.login = login;
             newAccount.email = email;
             newAccount.passwordHash = passwordHash;
             newAccount.promoCode = promocode;
             newAccount.dateCreated = DateTime.Now;
 
-            BsonValue val = accountCollection.Insert(newAccount);
-
-            Debug.Log("Account Database: account created, id=" + newAccount.id + ", val=" + val.ToString());
+            accountStorage.Store(newAccount);
 
             return true;
         }
 
         public Account GetAccount(string login, string passwordHash)
         {
-            {
-                foreach(Account acc in accountCollection.FindAll())
-                {
-                    Debug.Log("acc id=" + acc.id + ", login=" + acc.login);
-                }
-            }
-
-            Account existing = accountCollection.FindById(new BsonValue(HashUtil.MakeInt32(login)));
+            Account existing = accountStorage.Load(login);
 
             if (existing == null)
             {
@@ -77,7 +61,13 @@ namespace Multiverse
 
         public void UpdateAccount(Account account)
         {
-            accountCollection.Update(account);
+            if (!accountStorage.Exists(account.id))
+            {
+                Debug.LogWarning("Storage element doesnt exist but there was attempt to update it, skipped");
+                return;
+            }
+
+            accountStorage.Store(account);
         }
     }
 }
