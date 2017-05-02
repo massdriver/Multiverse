@@ -30,6 +30,18 @@ namespace Multiverse
 
         internal byte componentId { get; set; }
 
+        private NetworkMessageHandler handlers;
+
+        private void Awake()
+        {
+            handlers = new NetworkMessageHandler();
+        }
+
+        protected void RegisterMessage<T>(NetworkMessageHandler.MessageHandler handler) where T : Message
+        {
+            handlers.SetHandler<T>(handler);
+        }
+
         public virtual void Serialize(NetBuffer msg, bool initialState)
         {
 
@@ -46,6 +58,16 @@ namespace Multiverse
         }
 
         public virtual void OnUnspawn()
+        {
+
+        }
+
+        public void SyncState()
+        {
+
+        }
+
+        internal void HandleScriptMessage(Message m)
         {
 
         }

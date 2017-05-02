@@ -5,7 +5,10 @@ using UnityEngine;
 namespace Multiverse
 {
     [DisallowMultipleComponent]
-    public class UNetworkManager : MonoBehaviour, LidgrenServer.IDelegate, LidgrenClient.IDelegate
+    public class UNetworkManager :
+        MonoBehaviour,
+        LidgrenServer.IDelegate,
+        LidgrenClient.IDelegate
     {
         public int serverPort = 14678;
         public int maxServerConnections = 32;

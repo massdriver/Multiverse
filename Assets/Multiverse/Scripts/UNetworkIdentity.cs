@@ -53,6 +53,21 @@ namespace Multiverse
             }
         }
 
+        internal byte[] ToBytes()
+        {
+            return null;
+        }
+
+        internal void FromBytes(byte[] data)
+        {
+
+        }
+
+        internal void HandleScriptMessage(Message m, byte component)
+        {
+
+        }
+
 #if UNITY_EDITOR
         private void OnValidate()
         {
