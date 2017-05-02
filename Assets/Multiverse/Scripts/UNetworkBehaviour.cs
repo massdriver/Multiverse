@@ -1,4 +1,5 @@
-﻿using System;
+﻿using Lidgren.Network;
+using System;
 using System.Collections.Generic;
 using System.Linq;
 using System.Text;
@@ -26,5 +27,28 @@ namespace Multiverse
         public bool isServer { get { return UNetworkManager.singleton.isServer; } }
         public bool isPureClient { get { return UNetworkManager.singleton.isPureClient; } }
         public bool hasAuthority { get { return identity.hasAuthority; } }
+
+        internal byte componentId { get; set; }
+
+        public virtual void Serialize(NetBuffer msg, bool initialState)
+        {
+
+        }
+
+        public virtual void Deserialize(NetBuffer msg, bool initialState)
+        {
+
+        }
+
+        public virtual void OnSpawn()
+        {
+
+        }
+
+        public virtual void OnUnspawn()
+        {
+
+        }
+
     }
 }

@@ -12,16 +12,15 @@ namespace Multiverse
         public string assetNickname;
 
         [SerializeField]
-        private ulong m_AssetID;
-        public ulong assetId { get { return m_AssetID; } }
+        private ulong precomputedAssetId;
+        public ulong assetId { get { return precomputedAssetId; } }
 
         public const ulong ServerOwner = ulong.MaxValue;
         public const ulong InvalidNetId = ulong.MaxValue;
 
         public ulong netId { get; private set; }
-        public ulong ownerId { get; private set; }
         public ulong sceneId { get; set; }
-
+        public ushort ownerId { get; private set; }
         public bool hasAuthority { get { return UNetworkManager.singleton.localOwnerId == ownerId; } }
 
         private UNetworkBehaviour[] cachedBehaviours;
@@ -29,12 +28,35 @@ namespace Multiverse
         private void Awake()
         {
             cachedBehaviours = GetComponents<UNetworkBehaviour>();
+
+            byte i = 0;
+            foreach(UNetworkBehaviour b in cachedBehaviours)
+            {
+                b.componentId = i;
+                i++;
+            }
+        }
+
+        internal void CallEventOnSpawn()
+        {
+            foreach(UNetworkBehaviour b in cachedBehaviours)
+            {
+                b.OnSpawn();
+            }
+        }
+
+        internal void CallEventOnUnspawn()
+        {
+            foreach (UNetworkBehaviour b in cachedBehaviours.Reverse())
+            {
+                b.OnUnspawn();
+            }
         }
 
 #if UNITY_EDITOR
         private void OnValidate()
         {
-            m_AssetID = HashUtil.FromString64(assetNickname);
+            precomputedAssetId = HashUtil.FromString64(assetNickname);
         }
 #endif
     }
