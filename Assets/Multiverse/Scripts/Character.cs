@@ -6,21 +6,9 @@ using Lidgren.Network;
 
 namespace Multiverse
 {
-    public class Character : INetBufferSerializable
+    public class Character : StorageElement
     {
-        [LiteDB.BsonId]
-        public long id;
         public string nickname;
         public string zone;
-
-        public void Deserialize(NetBuffer msg)
-        {
-            throw new NotImplementedException();
-        }
-
-        public void Serialize(NetBuffer msg)
-        {
-            throw new NotImplementedException();
-        }
     }
 }

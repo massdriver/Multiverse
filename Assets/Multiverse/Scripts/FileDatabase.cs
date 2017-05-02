@@ -48,6 +48,12 @@ namespace Multiverse
             return System.IO.File.Exists(FilePathFromId(id));
         }
 
+        public void Delete(ulong id)
+        {
+            if(Exists(id))
+                System.IO.File.Delete(FilePathFromId(id));
+        }
+
         public T Load(string nonHashedId)
         {
             return Load(MakeId(nonHashedId));

@@ -138,7 +138,7 @@ namespace Multiverse
 
         public virtual void OnAuthorized(bool success, ulong sessionId)
         {
-
+            Debug.Log("Login Client: authorized=" + success + ", sessionId=" + sessionId);
         }
 
         public virtual void OnAccountData(Account account)

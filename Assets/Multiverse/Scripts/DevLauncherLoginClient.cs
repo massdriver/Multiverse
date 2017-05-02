@@ -53,7 +53,7 @@ namespace Multiverse
                     GUILayout.Label("Email");
                     email = GUILayout.TextField(email);
                     GUILayout.Label("Promocode");
-                    promoCode = GUILayout.TextField(email);
+                    promoCode = GUILayout.TextField(promoCode);
 
                     GUILayout.Height(15);
 

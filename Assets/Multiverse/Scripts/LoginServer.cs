@@ -155,7 +155,7 @@ namespace Multiverse
             LoginSession newSession = new Multiverse.LoginSession(msg.sourceClient, nextSessionId, account);
             activeSessions.Add(msg.sourceClient, newSession);
 
-            server.Send(msg.sourceClient, new LsLoginReply(false, newSession.sessionId), Lidgren.Network.NetDeliveryMethod.ReliableOrdered);
+            server.Send(msg.sourceClient, new LsLoginReply(true, newSession.sessionId), Lidgren.Network.NetDeliveryMethod.ReliableOrdered);
 
             OnNewLoginSession(newSession);
         }
