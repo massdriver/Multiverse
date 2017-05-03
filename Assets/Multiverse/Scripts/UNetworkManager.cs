@@ -35,6 +35,7 @@ namespace Multiverse
         private Dictionary<ulong, UNetworkIdentity> networkObjects { get; set; }
         private Dictionary<ulong, UNetworkIdentity> sceneInitialObjects { get; set; }
         private Dictionary<ushort, GameObject> playerObjects { get; set; }
+        private Dictionary<ulong, ushort> players { get; set; }
         private List<ushort> readyPlayers { get; set; }
 
         private LidgrenServer serverObject;
@@ -44,6 +45,7 @@ namespace Multiverse
         private NetworkMessageHandler clientMessageHandler;
 
         private ulong netIdCounter = 1;
+        private ulong nextOwnerId = 1;
 
         private void Awake()
         {
@@ -70,6 +72,8 @@ namespace Multiverse
             RegisterClientMessageHandler<UMsgLoadTargetScene>(ClientHandleUMsgLoadTargetScene);
             RegisterClientMessageHandler<UMsgSpawnObject>(ClientHandleUMsgSpawnObject);
             RegisterClientMessageHandler<UMsgUnspawnObject>(ClientHandleUMsgUnspawnObject);
+            RegisterClientMessageHandler<UMsgAddPlayer>(ClientHandleUMsgAddPlayer);
+            RegisterClientMessageHandler<UMsgRemovePlayer>(ClientHandleUMsgRemovePlayer);
 
             RegisterSpawnablePrefabs();
         }
@@ -195,12 +199,15 @@ namespace Multiverse
             ForceUnspawnNetworkObject(iden);
         }
 
-        private void SpawnPlayerObject(ulong ownerId)
+        private void AddPlayer(ushort client, ulong owner)
         {
-            throw new NotImplementedException();
+            
+            players.Add(nextOwnerId++, client);
+
+            serverObject.SendToAll(new UMsgAddPlayer(owner, client), Lidgren.Network.NetDeliveryMethod.ReliableOrdered);
         }
 
-        private void UnspawnPlayerObject(ulong owner)
+        private void RemovePlayer(ushort client, ulong owner)
         {
             throw new NotImplementedException();
         }
@@ -303,6 +310,9 @@ namespace Multiverse
 
         private void ClientHandleUMsgLoadTargetScene(Message m)
         {
+            if (isServer)
+                return;
+
             UMsgLoadTargetScene msg = m as UMsgLoadTargetScene;
         }
 
@@ -343,6 +353,26 @@ namespace Multiverse
             networkObjects.Remove(iden.netId);
 
             ForceUnspawnNetworkObject(iden);
+        }
+
+        private void ClientHandleUMsgAddPlayer(Message m)
+        {
+            if (isServer)
+                return;
+
+            UMsgAddPlayer msg = m as UMsgAddPlayer;
+
+            players.Add(msg.ownerId, msg.clientId);
+        }
+
+        private void ClientHandleUMsgRemovePlayer(Message m)
+        {
+            if (isServer)
+                return;
+
+            UMsgRemovePlayer msg = m as UMsgRemovePlayer;
+
+            players.Remove(msg.owner);
         }
 
         //

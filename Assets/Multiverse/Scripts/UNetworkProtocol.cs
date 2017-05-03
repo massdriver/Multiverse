@@ -94,4 +94,57 @@ namespace Multiverse
         }
     }
 
+    internal sealed class UMsgRemovePlayer : Message
+    {
+        public ulong owner;
+
+        public UMsgRemovePlayer()
+        {
+
+        }
+
+        public UMsgRemovePlayer(ulong owner)
+        {
+            this.owner = owner;
+        }
+
+        public override void Read(NetBuffer msg)
+        {
+            owner = msg.ReadUInt64();
+        }
+
+        public override void Write(NetBuffer msg)
+        {
+            msg.Write(owner);
+        }
+    }
+
+    internal sealed class UMsgAddPlayer : Message
+    {
+        public ulong ownerId;
+        public ushort clientId;
+
+        public UMsgAddPlayer()
+        {
+
+        }
+
+        public UMsgAddPlayer(ulong ownerId, ushort clientId)
+        {
+            this.ownerId = ownerId;
+            this.clientId = clientId;
+        }
+
+        public override void Read(NetBuffer msg)
+        {
+            ownerId = msg.ReadUInt64();
+            clientId = msg.ReadUInt16();
+        }
+
+        public override void Write(NetBuffer msg)
+        {
+            msg.Write(ownerId);
+            msg.Write(clientId);
+        }
+    }
 }
