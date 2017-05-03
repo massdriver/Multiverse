@@ -10,8 +10,8 @@ namespace Multiverse
     [DisallowMultipleComponent]
     public sealed class UNetworkIdentity : MonoBehaviour
     {
-        public const ulong ServerOwner = ulong.MaxValue;
-        public const ulong InvalidNetId = ulong.MaxValue;
+        public const ulong ServerOwner = 0;
+        public const ulong InvalidNetId = 0;
 
         public string assetNickname;
 
@@ -25,8 +25,8 @@ namespace Multiverse
 
         internal ulong sceneId { get; set; }
 
-        public bool isClient { get { return UNetworkManager.singleton.isClient; } }
-        public bool isServer { get { return UNetworkManager.singleton.isServer; } }
+        public bool isClient { get { if (UNetworkManager.singleton == null) return false; return UNetworkManager.singleton.isClient; } }
+        public bool isServer { get { if (UNetworkManager.singleton == null) return false; return UNetworkManager.singleton.isServer; } }
 
         private UNetworkBehaviour[] cachedBehaviours;
 

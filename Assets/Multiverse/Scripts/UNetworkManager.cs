@@ -34,7 +34,7 @@ namespace Multiverse
         private Dictionary<ulong, GameObject> registeredPrefabs { get; set; }
         private Dictionary<ulong, UNetworkIdentity> networkObjects { get; set; }
         private Dictionary<ulong, UNetworkIdentity> sceneInitialObjects { get; set; }
-        private Dictionary<ushort, GameObject> playerObjects { get; set; }
+        private Dictionary<ushort, GameObject> serverPlayerObjects { get; set; }
         private Dictionary<ulong, ushort> players { get; set; }
         private List<ushort> readyPlayers { get; set; }
 
@@ -54,9 +54,9 @@ namespace Multiverse
 
             singleton = this;
 
+            players = new Dictionary<ulong, ushort>();
             networkObjects = new Dictionary<ulong, UNetworkIdentity>();
-            sceneInitialObjects = new Dictionary<ulong, UNetworkIdentity>();
-            playerObjects = new Dictionary<ushort, GameObject>();
+            serverPlayerObjects = new Dictionary<ushort, GameObject>();
             readyPlayers = new List<ushort>();
             registeredPrefabs = new Dictionary<ulong, GameObject>();
 
@@ -76,6 +76,27 @@ namespace Multiverse
             RegisterClientMessageHandler<UMsgRemovePlayer>(ClientHandleUMsgRemovePlayer);
 
             RegisterSpawnablePrefabs();
+        }
+
+        private void Start()
+        {
+            LocateInitialSceneObjects();
+        }
+
+        private void LocateInitialSceneObjects()
+        {
+            sceneInitialObjects = new Dictionary<ulong, UNetworkIdentity>();
+
+            foreach (var obj in topRootObjects)
+            {
+                UNetworkIdentity uv = obj.GetComponent<UNetworkIdentity>();
+
+                if (uv == null)
+                    continue;
+
+                if (uv.sceneId != UNetworkIdentity.InvalidNetId)
+                    sceneInitialObjects.Add(uv.sceneId, uv);
+            }
         }
 
         protected virtual void RegisterSpawnablePrefabs()
@@ -127,6 +148,9 @@ namespace Multiverse
 
         public void StopManager()
         {
+            if (!isManagerActive)
+                return;
+
             clientObject.Disconnect();
             serverObject.Stop();
 
@@ -158,7 +182,7 @@ namespace Multiverse
                 ForceUnspawnNetworkObject(kp.Value);
 
             networkObjects.Clear();
-            playerObjects.Clear();
+            serverPlayerObjects.Clear();
         }
 
         //
@@ -199,17 +223,21 @@ namespace Multiverse
             ForceUnspawnNetworkObject(iden);
         }
 
-        private void AddPlayer(ushort client, ulong owner)
+        private ulong AddPlayer(ushort client)
         {
-            
-            players.Add(nextOwnerId++, client);
+            ulong owner = nextOwnerId++;
+            players.Add(owner, client);
 
             serverObject.SendToAll(new UMsgAddPlayer(owner, client), Lidgren.Network.NetDeliveryMethod.ReliableOrdered);
+
+            return owner;
         }
 
-        private void RemovePlayer(ushort client, ulong owner)
+        private void RemovePlayer(ulong owner)
         {
-            throw new NotImplementedException();
+            players.Remove(owner);
+
+            serverObject.SendToAll(new UMsgRemovePlayer(owner), Lidgren.Network.NetDeliveryMethod.ReliableOrdered);
         }
 
         public void SetAuthority(GameObject obj, ushort owner)
@@ -237,26 +265,12 @@ namespace Multiverse
             if (!isServer)
                 return;
 
-            foreach (var obj in topRootObjects)
-            {
-                UNetworkIdentity uv = obj.GetComponent<UNetworkIdentity>();
-
-                if (uv == null)
-                    continue;
-
-                if (uv.sceneId != UNetworkIdentity.InvalidNetId)
-                    sceneInitialObjects.Add(uv.sceneId, uv);
-            }
-
             foreach (var kp in sceneInitialObjects)
                 Spawn(kp.Value.gameObject);
         }
 
         private void ForceUnspawnNetworkObject(UNetworkIdentity iden)
         {
-            if (!isManagerActive)
-                return;
-
             iden.CallEventOnUnspawn();
             iden.netId = UNetworkIdentity.InvalidNetId;
 
@@ -270,18 +284,37 @@ namespace Multiverse
             }
         }
 
+        private GameObject FindPlayerObject(ushort clientId)
+        {
+            GameObject obj = null;
+            serverPlayerObjects.TryGetValue(clientId, out obj);
+            return obj;
+        }
+
         //
         //
         //
 
         void LidgrenServer.IDelegate.OnServerClientConnected(LidgrenServer server, ushort newClientID)
         {
+            ulong owner = AddPlayer(newClientID);
+            GameObject playerObject = Instantiate(playerPrefab);
+            SpawnWithAuthority(playerObject, owner);
 
+            serverPlayerObjects.Add(newClientID, playerObject);
         }
 
         void LidgrenServer.IDelegate.OnServerClientDisconnected(LidgrenServer server, ushort leavingClientID)
         {
+            GameObject playerObject = FindPlayerObject(leavingClientID);
 
+            if (playerObject != null)
+            {
+                serverPlayerObjects.Remove(leavingClientID);
+                Unspawn(playerObject);
+            }
+
+            RemovePlayer(leavingClientID);
         }
 
         void LidgrenServer.IDelegate.OnServerMessageReceived(LidgrenServer server, ushort sourceClient, Message msg)
@@ -300,7 +333,7 @@ namespace Multiverse
 
         void LidgrenClient.IDelegate.OnClientDisconnected(LidgrenClient client)
         {
-
+            StopManager();
         }
 
         void LidgrenClient.IDelegate.OnClientMessageReceived(LidgrenClient client, Message msg)
@@ -373,6 +406,11 @@ namespace Multiverse
             UMsgRemovePlayer msg = m as UMsgRemovePlayer;
 
             players.Remove(msg.owner);
+        }
+
+        private void OnApplicationQuit()
+        {
+            StopManager();
         }
 
         //
