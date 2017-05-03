@@ -126,6 +126,8 @@ namespace Multiverse
             clientObject.Disconnect();
             serverObject.Stop();
 
+            CleanNetworkScene();
+
             isClient = false;
             isServer = false;
         }
@@ -144,7 +146,16 @@ namespace Multiverse
             registeredPrefabs[obj.GetComponent<UNetworkIdentity>().assetId] = obj;
         }
 
+        private void CleanNetworkScene()
+        {
+            localPlayerObject = null;
 
+            foreach (KeyValuePair<ulong, UNetworkIdentity> kp in networkObjects)
+                ForceUnspawnNetworkObject(kp.Value);
+
+            networkObjects.Clear();
+            playerObjects.Clear();
+        }
 
         //
         //
@@ -186,18 +197,20 @@ namespace Multiverse
 
         private void SpawnPlayerObject(ulong ownerId)
         {
-
+            throw new NotImplementedException();
         }
 
         private void UnspawnPlayerObject(ulong owner)
         {
-
+            throw new NotImplementedException();
         }
 
         public void SetAuthority(GameObject obj, ushort owner)
         {
             if (!isServer)
                 return;
+
+            throw new NotImplementedException();
         }
 
         //
@@ -228,12 +241,8 @@ namespace Multiverse
                     sceneInitialObjects.Add(uv.sceneId, uv);
             }
 
-            Debug.Log("Found " + sceneInitialObjects.Count);
-
             foreach (var kp in sceneInitialObjects)
-            {
                 Spawn(kp.Value.gameObject);
-            }
         }
 
         private void ForceUnspawnNetworkObject(UNetworkIdentity iden)
