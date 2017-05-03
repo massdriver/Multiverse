@@ -115,7 +115,15 @@ namespace Multiverse
             }
         }
 
+        internal void HandleBehaviourSyncMessage(UMsgSyncState msg)
+        {
+            UNetworkBehaviour beh = cachedBehaviours[msg.netComponentId];
 
+            NetBuffer reader = new NetBuffer();
+            reader.Data = msg.data;
+
+            beh.Deserialize(reader, false);
+        }
 
 #if UNITY_EDITOR
         private void OnValidate()

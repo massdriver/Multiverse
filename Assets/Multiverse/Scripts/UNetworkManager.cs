@@ -77,6 +77,9 @@ namespace Multiverse
             RegisterClientMessageHandler<UMsgAddPlayer>(ClientHandleUMsgAddPlayer);
             RegisterClientMessageHandler<UMsgRemovePlayer>(ClientHandleUMsgRemovePlayer);
 
+            RegisterServerMessageHandler<UMsgSyncState>(ServerHandleUMsgSyncState);
+            RegisterClientMessageHandler<UMsgSyncState>(ClientHandleUMsgSyncState);
+
             RegisterSpawnablePrefabs();
         }
 
@@ -363,6 +366,21 @@ namespace Multiverse
             serverMessageHandler.HandleMessage(msg);
         }
 
+        private void ServerHandleUMsgSyncState(Message m)
+        {
+            UMsgSyncState msg = m as UMsgSyncState;
+
+            UNetworkIdentity iden;
+
+            if (networkObjects.TryGetValue(msg.targetNetID, out iden))
+            {
+                iden.HandleBehaviourSyncMessage(msg);
+
+                // Resend this update to other clients except local if present
+                serverObject.SendToAllExceptOneClient(msg.sourceClient, msg, NetDeliveryMethod.ReliableOrdered);
+            }
+        }
+
         //
         //
         //
@@ -447,6 +465,18 @@ namespace Multiverse
             UMsgRemovePlayer msg = m as UMsgRemovePlayer;
 
             players.Remove(msg.owner);
+        }
+
+        private void ClientHandleUMsgSyncState(Message m)
+        {
+            if (isServer)
+                return;
+
+            UMsgSyncState msg = m as UMsgSyncState;
+
+            UNetworkIdentity iden = networkObjects[msg.targetNetID];
+
+            iden.HandleBehaviourSyncMessage(msg);
         }
 
         private void OnApplicationQuit()

@@ -77,6 +77,8 @@ namespace Multiverse
             }
         }
 
+        
+
         internal void HandleScriptMessage(Message m)
         {
             handlers.HandleMessage(m);
