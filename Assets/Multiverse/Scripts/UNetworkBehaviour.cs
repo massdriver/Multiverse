@@ -17,6 +17,10 @@ namespace Multiverse
         public bool isPureClient { get { return UNetworkManager.singleton.isPureClient; } }
         public bool hasAuthority { get { return identity.hasAuthority; } }
 
+        public float syncTimeDelta = 0;
+
+        private float syncTimer = 0;
+
         internal byte componentId { get; set; }
 
         private NetworkMessageHandler handlers;
@@ -77,12 +81,58 @@ namespace Multiverse
             }
         }
 
-        
+        protected virtual void Update()
+        {
+            if(syncTimeDelta > 0)
+            {
+                syncTimer -= Time.deltaTime;
 
-        internal void HandleScriptMessage(Message m)
+                if (syncTimer < 0)
+                {
+                    SyncState();
+                    syncTimer = syncTimeDelta;
+                }
+            }
+        }
+
+        internal void HandleMessage(Message m)
         {
             handlers.HandleMessage(m);
         }
 
+        public void SendCommand(Message scriptMessage)
+        {
+            if (!isClient)
+                throw new Exception("Cannot send Command message because you are not client");
+
+            UNetworkManager.singleton.SendMessageToServer(new UMsgScriptMessage(this, scriptMessage));
+        }
+
+        public void SendClientRpc(Message scriptMessage)
+        {
+            if (!isServer)
+                throw new Exception("Cannot send ClientRpc message because you are not server");
+
+            UMsgScriptMessage msg = new UMsgScriptMessage(this, scriptMessage);
+            UNetworkManager.singleton.SendMessageToAllClients(msg);
+        }
+
+        public void SendClientRpcExceptLocal(Message scriptMessage)
+        {
+            if (!isServer)
+                throw new Exception("Cannot send ClientRpc message because you are not server");
+
+            UMsgScriptMessage msg = new UMsgScriptMessage(this, scriptMessage);
+            UNetworkManager.singleton.SendMessageToAllClientsExceptLocal(msg);
+        }
+
+        public void SendClientRpc(Message scriptMessage, ushort targetClient)
+        {
+            if (!isServer)
+                throw new Exception("Cannot send ClientRpc message because you are not server");
+
+            UMsgScriptMessage msg = new UMsgScriptMessage(this, scriptMessage);
+            UNetworkManager.singleton.SendMessageToAllClients(msg);
+        }
     }
 }

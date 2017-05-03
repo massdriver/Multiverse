@@ -80,6 +80,10 @@ namespace Multiverse
             RegisterServerMessageHandler<UMsgSyncState>(ServerHandleUMsgSyncState);
             RegisterClientMessageHandler<UMsgSyncState>(ClientHandleUMsgSyncState);
 
+
+            RegisterServerMessageHandler<UMsgScriptMessage>(ServerHandleUMsgScriptMessage);
+            RegisterClientMessageHandler<UMsgScriptMessage>(ClientHandleUMsgScriptMessage);
+
             RegisterSpawnablePrefabs();
         }
 
@@ -187,6 +191,11 @@ namespace Multiverse
 
             if (serverObject != null)
                 serverObject.Update();
+        }
+
+        private void OnApplicationQuit()
+        {
+            StopManager();
         }
 
         public void RegisterPrefab(GameObject obj)
@@ -381,6 +390,21 @@ namespace Multiverse
             }
         }
 
+        private void ServerHandleUMsgScriptMessage(Message m)
+        {
+            UMsgScriptMessage msg = m as UMsgScriptMessage;
+            UNetworkIdentity iden = networkObjects[msg.netid];
+
+            Message newMsg = serverObject.CreateMessageObject(msg.originalMessageId);
+
+            NetBuffer buffer = new NetBuffer();
+            buffer.Data = msg.messageData;
+
+            newMsg.Read(buffer);
+
+            iden.HandleScriptMessage(newMsg, msg.netComponentId);
+        }
+
         //
         //
         //
@@ -479,9 +503,19 @@ namespace Multiverse
             iden.HandleBehaviourSyncMessage(msg);
         }
 
-        private void OnApplicationQuit()
+        private void ClientHandleUMsgScriptMessage(Message m)
         {
-            StopManager();
+            UMsgScriptMessage msg = m as UMsgScriptMessage;
+            UNetworkIdentity iden = networkObjects[msg.netid];
+
+            Message newMsg = clientObject.CreateMessageObject(msg.originalMessageId);
+
+            NetBuffer buffer = new NetBuffer();
+            buffer.Data = msg.messageData;
+
+            newMsg.Read(buffer);
+
+            iden.HandleScriptMessage(newMsg, msg.netComponentId);
         }
 
         //

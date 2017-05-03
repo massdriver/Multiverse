@@ -74,7 +74,10 @@ namespace Multiverse
 
         internal void HandleScriptMessage(Message m, byte component)
         {
+            UNetworkBehaviour b = cachedBehaviours[component];
 
+            if (b.enabled)
+                b.HandleMessage(m);
         }
 
         internal void Serialize(NetBuffer msg, bool initialState)

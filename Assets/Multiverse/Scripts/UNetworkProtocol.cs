@@ -184,4 +184,58 @@ namespace Multiverse
             NetSerialize.Write(msgOut, data);
         }
     }
+
+    public sealed class UMsgScriptMessage : Message
+    {
+        public ulong netid { get; set; }
+        public byte netComponentId { get; set; }
+        public int originalMessageId { get; set; }
+        public byte[] messageData { get; set; }
+
+        public UMsgScriptMessage()
+        {
+
+        }
+
+        public UMsgScriptMessage(UNetworkBehaviour source, Message originalMessage, int serializationBufferSize)
+        {
+            netid = source.identity.netId;
+            netComponentId = source.componentId;
+
+            NetBuffer buffer = new NetBuffer();
+            buffer.EnsureBufferSize(8 * serializationBufferSize);
+            originalMessage.Write(buffer);
+
+            originalMessageId = originalMessage.hashCode;
+            messageData = buffer.Data;
+        }
+
+        public UMsgScriptMessage(UNetworkBehaviour source, Message originalMessage)
+        {
+            netid = source.identity.netId;
+            netComponentId = source.componentId;
+
+            NetBuffer buffer = new NetBuffer();
+            originalMessage.Write(buffer);
+
+            originalMessageId = originalMessage.hashCode;
+            messageData = buffer.Data;
+        }
+
+        public override void Write(NetBuffer m)
+        {
+            m.Write(netid);
+            m.Write(netComponentId);
+            m.Write(originalMessageId);
+            NetSerialize.Write(m, messageData);
+        }
+
+        public override void Read(NetBuffer m)
+        {
+            netid = m.ReadUInt64();
+            netComponentId = m.ReadByte();
+            originalMessageId = m.ReadInt32();
+            messageData = NetSerialize.ReadBytes(m);
+        }
+    }
 }
