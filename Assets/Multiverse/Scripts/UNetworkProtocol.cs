@@ -147,4 +147,41 @@ namespace Multiverse
             msg.Write(clientId);
         }
     }
+
+    public sealed class UMsgSyncState : Message
+    {
+        public ulong targetNetID { get; set; }
+        public byte netComponentId { get; set; }
+        public byte[] data { get; set; }
+
+        public UMsgSyncState()
+        {
+
+        }
+
+        public UMsgSyncState(UNetworkBehaviour networkObject)
+        {
+            targetNetID = networkObject.netId;
+            netComponentId = networkObject.componentId;
+
+            NetBuffer state = new NetBuffer();
+            networkObject.Serialize(state, false);
+
+            data = state.Data;
+        }
+
+        public override void Read(NetBuffer msgIn)
+        {
+            targetNetID = msgIn.ReadUInt64();
+            netComponentId = msgIn.ReadByte();
+            data = NetSerialize.ReadBytes(msgIn);
+        }
+
+        public override void Write(NetBuffer msgOut)
+        {
+            msgOut.Write(targetNetID);
+            msgOut.Write(netComponentId);
+            NetSerialize.Write(msgOut, data);
+        }
+    }
 }

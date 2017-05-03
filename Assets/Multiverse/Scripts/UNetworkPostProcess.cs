@@ -6,7 +6,7 @@ using UnityEngine;
 
 namespace Multiverse
 {
-    public class UNetworkPostProcess : MonoBehaviour
+    public static class UNetworkPostProcess
     {
 #if UNITY_EDITOR
         [PostProcessScene]
@@ -14,7 +14,7 @@ namespace Multiverse
         {
             ulong nextSceneId = 1;
 
-            foreach (UNetworkIdentity uv in FindObjectsOfType<UNetworkIdentity>())
+            foreach (UNetworkIdentity uv in GameObject.FindObjectsOfType<UNetworkIdentity>())
             {
                 if (uv.GetComponent<UNetworkManager>() != null)
                 {

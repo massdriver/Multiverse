@@ -1,5 +1,7 @@
-﻿using System;
+﻿using Lidgren.Network;
+using System;
 using System.Collections.Generic;
+using System.Net;
 using UnityEngine;
 
 namespace Multiverse
@@ -108,26 +110,38 @@ namespace Multiverse
                 RegisterPrefab(obj);
         }
 
-        public void RegisterServerMessageHandler<T>(NetworkMessageHandler.MessageHandler handler) where T : Message
+        public void RegisterMessage<T>() where T : Message
         {
             serverObject.RegisterMessageType<T>();
+            clientObject.RegisterMessageType<T>();
+        }
+
+        public void RegisterServerMessageHandler<T>(NetworkMessageHandler.MessageHandler handler) where T : Message
+        {
+            RegisterMessage<T>();
             serverMessageHandler.SetHandler<T>(handler);
         }
 
         public void RegisterClientMessageHandler<T>(NetworkMessageHandler.MessageHandler handler) where T : Message
         {
-            clientObject.RegisterMessageType<T>();
+            RegisterMessage<T>();
             clientMessageHandler.SetHandler<T>(handler);
         }
 
         public void StartHost()
         {
+            if (isManagerActive)
+                return;
+
             StartServer();
             StartClient();
         }
 
         public void StartServer()
         {
+            if (isManagerActive)
+                return;
+
             isServer = true;
             serverObject.Start(serverPort, maxServerConnections, sessionName, connectionTimeout);
 
@@ -140,6 +154,9 @@ namespace Multiverse
 
         public void StartClient()
         {
+            if (isManagerActive)
+                return;
+
             isClient = true;
             clientObject.Connect(targetServerAddress, serverPort, sessionName);
 
@@ -171,7 +188,15 @@ namespace Multiverse
 
         public void RegisterPrefab(GameObject obj)
         {
-            registeredPrefabs[obj.GetComponent<UNetworkIdentity>().assetId] = obj;
+            ulong id = obj.GetComponent<UNetworkIdentity>().assetId;
+
+            if (id == 0)
+            {
+                Debug.LogError("Cant register prefab without proper unique asset id");
+                return;
+            }
+
+            registeredPrefabs.Add(id,obj);
         }
 
         private void CleanNetworkScene()
@@ -295,8 +320,24 @@ namespace Multiverse
         //
         //
 
+        public bool IsClientLocal(ushort id)
+        {
+            if (isServer && isClient)
+            {
+                NetConnection clientConnection = clientObject.GetConnection();
+                NetConnection serverConnection = serverObject.GetConnection(id);
+                IPEndPoint ipep = clientConnection.RemoteEndPoint;
+                return ipep.Port == serverPort &&  ipep.Address.Equals(IPAddress.Loopback) && serverConnection.RemoteEndPoint.Port == clientConnection.Peer.Port;
+            }
+
+            return false;
+        }
+
         void LidgrenServer.IDelegate.OnServerClientConnected(LidgrenServer server, ushort newClientID)
         {
+            if (IsClientLocal(newClientID))
+                localClientId = newClientID;
+
             ulong owner = AddPlayer(newClientID);
             GameObject playerObject = Instantiate(playerPrefab);
             SpawnWithAuthority(playerObject, owner);
@@ -411,6 +452,31 @@ namespace Multiverse
         private void OnApplicationQuit()
         {
             StopManager();
+        }
+
+        //
+        //
+        //
+        internal void SendMessageToClient(Message msg, ushort client)
+        {
+            serverObject.Send(client, msg, Lidgren.Network.NetDeliveryMethod.ReliableOrdered);
+        }
+
+        internal void SendMessageToAllClients(Message msg)
+        {
+            serverObject.SendToAll(msg, Lidgren.Network.NetDeliveryMethod.ReliableOrdered);
+        }
+
+        internal ushort localClientId { get; set; }
+
+        internal void SendMessageToAllClientsExceptLocal(Message m)
+        {
+            serverObject.SendToAllExceptOneClient(localClientId, m, Lidgren.Network.NetDeliveryMethod.ReliableOrdered);
+        }
+
+        internal void SendMessageToServer(Message msg)
+        {
+            clientObject.Send(msg, Lidgren.Network.NetDeliveryMethod.ReliableOrdered);
         }
 
         //
