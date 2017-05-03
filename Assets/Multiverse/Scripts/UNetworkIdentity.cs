@@ -1,4 +1,5 @@
-﻿using System;
+﻿using Lidgren.Network;
+using System;
 using System.Collections.Generic;
 using System.Linq;
 using System.Text;
@@ -9,19 +10,23 @@ namespace Multiverse
     [DisallowMultipleComponent]
     public sealed class UNetworkIdentity : MonoBehaviour
     {
+        public const ulong ServerOwner = ulong.MaxValue;
+        public const ulong InvalidNetId = ulong.MaxValue;
+
         public string assetNickname;
 
         [SerializeField]
         private ulong precomputedAssetId;
+
         public ulong assetId { get { return precomputedAssetId; } }
+        public ulong netId { get; internal set; }
+        public ulong ownerId { get; internal set; }
+        public bool hasAuthority { get { return UNetworkManager.singleton.networkOwnerId == ownerId; } }
 
-        public const ulong ServerOwner = ulong.MaxValue;
-        public const ulong InvalidNetId = ulong.MaxValue;
+        internal ulong sceneId { get; set; }
 
-        public ulong netId { get; private set; }
-        public ulong sceneId { get; set; }
-        public ushort ownerId { get; private set; }
-        public bool hasAuthority { get { return UNetworkManager.singleton.localOwnerId == ownerId; } }
+        public bool isClient { get { return UNetworkManager.singleton.isClient; } }
+        public bool isServer { get { return UNetworkManager.singleton.isServer; } }
 
         private UNetworkBehaviour[] cachedBehaviours;
 
@@ -53,19 +58,61 @@ namespace Multiverse
             }
         }
 
-        internal byte[] ToBytes()
+        internal byte[] ToBytes(bool initialState)
         {
-            return null;
+            NetBuffer buffer = new NetBuffer();
+            Serialize(buffer, initialState);
+            return buffer.Data;
         }
 
-        internal void FromBytes(byte[] data)
+        internal void FromBytes(byte[] data, bool initialState)
         {
-
+            NetBuffer buffer = new NetBuffer();
+            buffer.Data = data;
+            Deserialize(buffer, initialState);
         }
 
         internal void HandleScriptMessage(Message m, byte component)
         {
 
+        }
+
+        internal void Serialize(NetBuffer msg, bool initialState)
+        {
+            if(initialState)
+            {
+                msg.Write(precomputedAssetId);
+                msg.Write(sceneId);
+                msg.Write(ownerId);
+                msg.Write(netId);
+
+                NetSerialize.Write(msg, transform.position);
+                NetSerialize.Write(msg, transform.rotation);
+            }
+
+            foreach (UNetworkBehaviour comp in cachedBehaviours)
+            {
+                comp.Serialize(msg, initialState);
+            }
+        }
+
+        internal void Deserialize(NetBuffer msg, bool initialState)
+        {
+            if(initialState)
+            {
+                precomputedAssetId = msg.ReadUInt64();
+                sceneId = msg.ReadUInt64();
+                ownerId = msg.ReadUInt64();
+                netId = msg.ReadUInt64();
+
+                transform.position = NetSerialize.ReadVector3(msg);
+                transform.rotation = NetSerialize.ReadQuaternion(msg);
+            }
+
+            foreach (UNetworkBehaviour comp in cachedBehaviours)
+            {
+                comp.Deserialize(msg, initialState);
+            }
         }
 
 #if UNITY_EDITOR
