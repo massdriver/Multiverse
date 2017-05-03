@@ -16,6 +16,12 @@ namespace Multiverse
 
             foreach (UNetworkIdentity uv in FindObjectsOfType<UNetworkIdentity>())
             {
+                if (uv.GetComponent<UNetworkManager>() != null)
+                {
+                    Debug.LogError("UNetworkManager instance on scene has UNetworkIdentity component attached, remove it");
+                    continue;
+                }
+
                 if (uv.isClient || uv.isServer)
                     continue;
 

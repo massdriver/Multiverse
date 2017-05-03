@@ -43,6 +43,8 @@ namespace Multiverse
         private NetworkMessageHandler serverMessageHandler;
         private NetworkMessageHandler clientMessageHandler;
 
+        private ulong netIdCounter = 1;
+
         private void Awake()
         {
             if (singleton != null)
@@ -68,6 +70,17 @@ namespace Multiverse
             RegisterClientMessageHandler<UMsgLoadTargetScene>(ClientHandleUMsgLoadTargetScene);
             RegisterClientMessageHandler<UMsgSpawnObject>(ClientHandleUMsgSpawnObject);
             RegisterClientMessageHandler<UMsgUnspawnObject>(ClientHandleUMsgUnspawnObject);
+
+            RegisterSpawnablePrefabs();
+        }
+
+        protected virtual void RegisterSpawnablePrefabs()
+        {
+            if (playerPrefab != null)
+                RegisterPrefab(playerPrefab);
+
+            foreach (GameObject obj in spawnablePrefabs)
+                RegisterPrefab(obj);
         }
 
         public void RegisterServerMessageHandler<T>(NetworkMessageHandler.MessageHandler handler) where T : Message
@@ -126,7 +139,12 @@ namespace Multiverse
                 serverObject.Update();
         }
 
-        private ulong netIdCounter = 1;
+        public void RegisterPrefab(GameObject obj)
+        {
+            registeredPrefabs[obj.GetComponent<UNetworkIdentity>().assetId] = obj;
+        }
+
+
 
         //
         //
@@ -186,10 +204,31 @@ namespace Multiverse
         //
         //
 
+        private GameObject[] topRootObjects
+        {
+            get
+            {
+                return UnityEngine.SceneManagement.SceneManager.GetActiveScene().GetRootGameObjects();
+            }
+        }
+
         private void SpawnSceneObjects()
         {
             if (!isServer)
                 return;
+
+            foreach (var obj in topRootObjects)
+            {
+                UNetworkIdentity uv = obj.GetComponent<UNetworkIdentity>();
+
+                if (uv == null)
+                    continue;
+
+                if (uv.sceneId != UNetworkIdentity.InvalidNetId)
+                    sceneInitialObjects.Add(uv.sceneId, uv);
+            }
+
+            Debug.Log("Found " + sceneInitialObjects.Count);
 
             foreach (var kp in sceneInitialObjects)
             {
@@ -204,7 +243,7 @@ namespace Multiverse
 
             iden.CallEventOnUnspawn();
             iden.netId = UNetworkIdentity.InvalidNetId;
-     
+
             if (iden.sceneId != UNetworkIdentity.InvalidNetId)
             {
                 iden.gameObject.SetActive(false);
@@ -221,12 +260,12 @@ namespace Multiverse
 
         void LidgrenServer.IDelegate.OnServerClientConnected(LidgrenServer server, ushort newClientID)
         {
-            
+
         }
 
         void LidgrenServer.IDelegate.OnServerClientDisconnected(LidgrenServer server, ushort leavingClientID)
         {
-            
+
         }
 
         void LidgrenServer.IDelegate.OnServerMessageReceived(LidgrenServer server, ushort sourceClient, Message msg)
@@ -240,12 +279,12 @@ namespace Multiverse
 
         void LidgrenClient.IDelegate.OnClientConnected(LidgrenClient client)
         {
-            
+
         }
 
         void LidgrenClient.IDelegate.OnClientDisconnected(LidgrenClient client)
         {
-            
+
         }
 
         void LidgrenClient.IDelegate.OnClientMessageReceived(LidgrenClient client, Message msg)
