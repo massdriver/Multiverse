@@ -83,14 +83,17 @@ namespace Multiverse
 
         protected virtual void Update()
         {
-            if(syncTimeDelta > 0)
+            if (hasAuthority)
             {
-                syncTimer -= Time.deltaTime;
-
-                if (syncTimer < 0)
+                if (syncTimeDelta > 0)
                 {
-                    SyncState();
-                    syncTimer = syncTimeDelta;
+                    syncTimer -= Time.deltaTime;
+
+                    if (syncTimer < 0)
+                    {
+                        SyncState();
+                        syncTimer = syncTimeDelta;
+                    }
                 }
             }
         }
