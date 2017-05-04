@@ -23,7 +23,8 @@ namespace Multiverse
         public ulong ownerId { get; internal set; }
         public bool hasAuthority { get { return UNetworkManager.singleton.networkOwnerId == ownerId; } }
 
-        internal ulong sceneId { get; set; }
+        [SerializeField]
+        internal ulong sceneId;
 
         public bool isClient { get { if (UNetworkManager.singleton == null) return false; return UNetworkManager.singleton.isClient; } }
         public bool isServer { get { if (UNetworkManager.singleton == null) return false; return UNetworkManager.singleton.isServer; } }

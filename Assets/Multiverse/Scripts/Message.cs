@@ -31,7 +31,7 @@ namespace Multiverse
 
         public static int GetMessageCode(Type type)
         {
-            return type.GetHashCode();
+            return (int)HashUtil.FromString(type.FullName);
         }
     }
 }

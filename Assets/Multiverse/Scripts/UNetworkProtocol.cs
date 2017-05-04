@@ -6,6 +6,31 @@ using Lidgren.Network;
 
 namespace Multiverse
 {
+    internal sealed class UMsgSetOwner : Message
+    {
+        public ulong owner;
+
+        public UMsgSetOwner()
+        {
+
+        }
+
+        public UMsgSetOwner(ulong owner)
+        {
+
+        }
+
+        public override void Read(NetBuffer msg)
+        {
+            owner = msg.ReadUInt64();
+        }
+
+        public override void Write(NetBuffer msg)
+        {
+            msg.Write(owner);
+        }
+    }
+
     internal sealed class UMsgSpawnObject : Message
     {
         public ulong netId;

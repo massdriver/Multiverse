@@ -91,7 +91,13 @@ namespace Multiverse
                             int msgid = msg.ReadInt32();
                             Message message = CreateMessageObject(msgid);
 
-                            if ((clientDelegate != null) && (message != null))
+                            if (message == null)
+                            {
+                                Debug.LogError("Lidgren client: unknown message type received, did you forget to RegisterMessageType<T>() ?");
+                                break;
+                            }
+
+                            if (clientDelegate != null)
                             {
                                 message.id = msgid;
                                 message.Read(msg);
@@ -149,7 +155,7 @@ namespace Multiverse
 
             //if (messageTypes.ContainsKey(code))
             //    throw new Exception("Message type already registered or there's typename hash collision");
-
+            
             messageTypes[code] = typeof(T);
         }
 
