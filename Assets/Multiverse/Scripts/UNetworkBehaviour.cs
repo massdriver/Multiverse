@@ -26,7 +26,7 @@ namespace Multiverse
         private NetworkMessageHandler handlers;
         private UNetworkIdentity m_identity;
 
-        private void Awake()
+        protected virtual void Awake()
         {
             handlers = new NetworkMessageHandler();
             m_identity = GetComponent<UNetworkIdentity>();

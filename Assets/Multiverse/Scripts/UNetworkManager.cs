@@ -146,7 +146,7 @@ namespace Multiverse
 
         public void StartServer()
         {
-            if (isManagerActive)
+            if (isServer)
                 return;
 
             isServer = true;
@@ -161,7 +161,7 @@ namespace Multiverse
 
         public void StartClient()
         {
-            if (isManagerActive)
+            if (isClient)
                 return;
 
             isClient = true;
@@ -355,6 +355,8 @@ namespace Multiverse
             SpawnWithAuthority(playerObject, owner);
 
             serverPlayerObjects.Add(newClientID, playerObject);
+
+            Debug.Log("OnServerClientConnected");
         }
 
         void LidgrenServer.IDelegate.OnServerClientDisconnected(LidgrenServer server, ushort leavingClientID)
