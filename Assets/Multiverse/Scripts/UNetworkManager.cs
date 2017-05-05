@@ -95,7 +95,7 @@ namespace Multiverse
 
         private void Start()
         {
-            LocateInitialSceneObjects();
+            
         }
 
         private void LocateInitialSceneObjects()
@@ -154,6 +154,8 @@ namespace Multiverse
             if (isServer)
                 return;
 
+            LocateInitialSceneObjects();
+
             networkSceneName = UnityEngine.SceneManagement.SceneManager.GetActiveScene().name;
 
             isServer = true;
@@ -170,6 +172,8 @@ namespace Multiverse
         {
             if (isClient)
                 return;
+
+            LocateInitialSceneObjects();
 
             networkSceneName = UnityEngine.SceneManagement.SceneManager.GetActiveScene().name;
 
@@ -474,6 +478,8 @@ namespace Multiverse
         private void OnClientSceneLoaded<T0, T1>(T0 arg0, T1 arg1)
         {
             UnityEngine.SceneManagement.SceneManager.activeSceneChanged -= OnClientSceneLoaded;
+
+            LocateInitialSceneObjects();
 
             clientObject.Send(new UMsgClientSceneLoaded(), NetDeliveryMethod.ReliableOrdered);
         }
