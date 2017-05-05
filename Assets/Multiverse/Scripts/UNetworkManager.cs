@@ -88,6 +88,8 @@ namespace Multiverse
 
             RegisterClientMessageHandler<UMsgSetOwner>(ClientHandleUMsgSetOwner);
 
+            RegisterServerMessageHandler<UMsgClientSceneLoaded>(ServerHandleUMsgClientSceneLoaded);
+
             RegisterSpawnablePrefabs();
         }
 
@@ -152,6 +154,8 @@ namespace Multiverse
             if (isServer)
                 return;
 
+            networkSceneName = UnityEngine.SceneManagement.SceneManager.GetActiveScene().name;
+
             isServer = true;
             serverObject.Start(serverPort, maxServerConnections, sessionName, connectionTimeout);
 
@@ -166,6 +170,8 @@ namespace Multiverse
         {
             if (isClient)
                 return;
+
+            networkSceneName = UnityEngine.SceneManagement.SceneManager.GetActiveScene().name;
 
             isClient = true;
             clientObject.Connect(targetServerAddress, serverPort, sessionName);
@@ -366,11 +372,8 @@ namespace Multiverse
             }
         }
 
-        public void OnServerClientConnected(LidgrenServer server, ushort newClientID)
+        private void PrepareNewClient(ushort newClientID)
         {
-            if (IsClientLocal(newClientID))
-                localClientId = newClientID;
-
             SendSceneStateToClient(newClientID);
 
             ulong owner = AddPlayer(newClientID);
@@ -378,6 +381,20 @@ namespace Multiverse
             SpawnWithAuthority(playerObject, owner);
 
             serverPlayerObjects.Add(newClientID, playerObject);
+        }
+
+        public void OnServerClientConnected(LidgrenServer server, ushort newClientID)
+        {
+            if (IsClientLocal(newClientID))
+            {
+                localClientId = newClientID;
+                PrepareNewClient(newClientID);
+            }
+            else
+            {
+                // Make sure that client has valid scene loaded
+                server.Send(newClientID, new UMsgLoadTargetScene(networkSceneName), NetDeliveryMethod.ReliableOrdered);
+            }
         }
 
         public void OnServerClientDisconnected(LidgrenServer server, ushort leavingClientID)
@@ -411,6 +428,13 @@ namespace Multiverse
                 // Resend this update to other clients except local if present
                 serverObject.SendToAllExceptOneClient(msg.sourceClient, msg, NetDeliveryMethod.ReliableOrdered);
             }
+        }
+
+        private void ServerHandleUMsgClientSceneLoaded(Message m)
+        {
+            UMsgClientSceneLoaded msg = m as UMsgClientSceneLoaded;
+
+            PrepareNewClient(msg.sourceClient);
         }
 
         private void ServerHandleUMsgScriptMessage(Message m)
@@ -447,12 +471,28 @@ namespace Multiverse
             clientMessageHandler.HandleMessage(msg);
         }
 
+        private void OnClientSceneLoaded<T0, T1>(T0 arg0, T1 arg1)
+        {
+            UnityEngine.SceneManagement.SceneManager.activeSceneChanged -= OnClientSceneLoaded;
+
+            clientObject.Send(new UMsgClientSceneLoaded(), NetDeliveryMethod.ReliableOrdered);
+        }
+
         private void ClientHandleUMsgLoadTargetScene(Message m)
         {
             if (isServer)
                 return;
 
             UMsgLoadTargetScene msg = m as UMsgLoadTargetScene;
+
+            if(networkSceneName == msg.networkSceneName)
+            {
+                clientObject.Send(new UMsgClientSceneLoaded(), NetDeliveryMethod.ReliableOrdered);
+            }
+            else
+            {
+                UnityEngine.SceneManagement.SceneManager.activeSceneChanged += OnClientSceneLoaded;
+            }
         }
 
         private void ClientHandleUMsgSpawnObject(Message m)
