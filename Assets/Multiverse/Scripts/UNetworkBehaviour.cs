@@ -10,8 +10,9 @@ namespace Multiverse
     [RequireComponent(typeof(UNetworkIdentity))]
     public abstract class UNetworkBehaviour : MonoBehaviour
     {
-        public UNetworkIdentity identity { get { return m_identity; } }
+        public UNetworkIdentity identity { get { if(m_identity == null) m_identity = GetComponent<UNetworkIdentity>(); return m_identity; } }
         public ulong netId { get { return identity.netId; } }
+        public ulong ownerId { get { return identity.ownerId; } }
         public bool isClient { get { return UNetworkManager.singleton.isClient; } }
         public bool isServer { get { return UNetworkManager.singleton.isServer; } }
         public bool isPureClient { get { return UNetworkManager.singleton.isPureClient; } }
@@ -29,7 +30,6 @@ namespace Multiverse
         protected virtual void Awake()
         {
             handlers = new NetworkMessageHandler();
-            m_identity = GetComponent<UNetworkIdentity>();
         }
 
         public void SetMessageHandler<T>(NetworkMessageHandler.MessageHandler handler) where T : Message
@@ -81,6 +81,19 @@ namespace Multiverse
             }
         }
 
+        public void ForceSyncServerStateToClients()
+        {
+            if (isServer)
+            {
+                UMsgSyncState msg = new UMsgSyncState(this);
+
+                if (isClient)
+                    UNetworkManager.singleton.SendMessageToAllClientsExceptLocal(msg);
+                else
+                    UNetworkManager.singleton.SendMessageToAllClients(msg);
+            }
+        }
+
         protected virtual void Update()
         {
             if (hasAuthority)
@@ -127,6 +140,15 @@ namespace Multiverse
 
             UMsgScriptMessage msg = new UMsgScriptMessage(this, scriptMessage);
             UNetworkManager.singleton.SendMessageToAllClientsExceptLocal(msg);
+        }
+
+        public void SendClientRpcExcept(ushort exceptClient, Message scriptMessage)
+        {
+            if (!isServer)
+                throw new Exception("Cannot send ClientRpc message because you are not server");
+
+            UMsgScriptMessage msg = new UMsgScriptMessage(this, scriptMessage);
+            UNetworkManager.singleton.SendMessageToAllClientsExcept(exceptClient, msg);
         }
 
         public void SendClientRpc(Message scriptMessage, ushort targetClient)

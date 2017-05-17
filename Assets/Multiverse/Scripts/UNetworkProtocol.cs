@@ -6,20 +6,6 @@ using Lidgren.Network;
 
 namespace Multiverse
 {
-    internal sealed class UMsgClientSceneLoaded : Message
-    {
-        public override void Read(NetBuffer msg)
-        {
-            
-        }
-
-        public override void Write(NetBuffer msg)
-        {
-            
-        }
-    }
-
-
     internal sealed class UMsgSetOwner : Message
     {
         public ulong owner;
@@ -31,7 +17,7 @@ namespace Multiverse
 
         public UMsgSetOwner(ulong owner)
         {
-
+            this.owner = owner;
         }
 
         public override void Read(NetBuffer msg)

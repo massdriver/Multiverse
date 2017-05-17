@@ -19,7 +19,7 @@ namespace Multiverse
         /*
          * Source client id is setup only for server message processing
          */
-        public ushort sourceClient { get; set; }
+        public ushort sourceClient { get; internal set; }
 
         public int hashCode
         {
@@ -33,5 +33,11 @@ namespace Multiverse
         {
             return (int)HashUtil.FromString(type.FullName);
         }
+    }
+
+    public abstract class EmptyMessage : Message
+    {
+        override public void Write(NetBuffer msg) { }
+        override public void Read(NetBuffer msg){ }
     }
 }

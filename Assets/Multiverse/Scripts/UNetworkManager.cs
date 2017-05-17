@@ -13,6 +13,7 @@ namespace Multiverse
         LidgrenClient.IDelegate
     {
         public const ulong ServerOwnerID = ulong.MaxValue;
+        public const ulong InvalidOwnerID = 0;
 
         public ushort serverPort = 14678;
         public ushort maxServerConnections = 32;
@@ -26,7 +27,7 @@ namespace Multiverse
         public static UNetworkManager singleton { get; private set; }
 
         public string networkSceneName { get; private set; }
-        public ulong networkOwnerId { get; private set; }
+        public ulong networkOwnerId;// { get; private set; }
         public GameObject localPlayerObject { get; private set; }
         public bool isServer { get; private set; }
         public bool isClient { get; private set; }
@@ -38,6 +39,7 @@ namespace Multiverse
         private Dictionary<ulong, UNetworkIdentity> sceneInitialObjects { get; set; }
         private Dictionary<ushort, GameObject> serverPlayerObjects { get; set; }
         private Dictionary<ulong, ushort> players { get; set; }
+        private Dictionary<ushort, ulong> clientOwners { get; set; }
         private List<ushort> readyPlayers { get; set; }
 
         private LidgrenServer serverObject;
@@ -56,9 +58,13 @@ namespace Multiverse
 
             singleton = this;
 
+            if (playerPrefab == null)
+                throw new InvalidOperationException("playerPrefab field is not set");
+
             isServer = false;
             isClient = false;
 
+            clientOwners = new Dictionary<ushort, ulong>();
             players = new Dictionary<ulong, ushort>();
             networkObjects = new Dictionary<ulong, UNetworkIdentity>();
             serverPlayerObjects = new Dictionary<ushort, GameObject>();
@@ -88,14 +94,32 @@ namespace Multiverse
 
             RegisterClientMessageHandler<UMsgSetOwner>(ClientHandleUMsgSetOwner);
 
-            RegisterServerMessageHandler<UMsgClientSceneLoaded>(ServerHandleUMsgClientSceneLoaded);
-
             RegisterSpawnablePrefabs();
+        }
+
+        public GameObject GetNetworkObject(ulong netId)
+        {
+            return networkObjects[netId].gameObject;
+        }
+
+        public GameObject GetNetworkPrefab(ulong asset)
+        {
+            return registeredPrefabs[asset];
+        }
+
+        public ulong ClientIdToOwner(ushort clientId)
+        {
+            if (isServer && localClientId == clientId)
+            {
+                return ServerOwnerID;
+            }
+
+            return clientOwners[clientId];
         }
 
         private void Start()
         {
-            
+            LocateInitialSceneObjects();
         }
 
         private void LocateInitialSceneObjects()
@@ -154,10 +178,6 @@ namespace Multiverse
             if (isServer)
                 return;
 
-            LocateInitialSceneObjects();
-
-            networkSceneName = UnityEngine.SceneManagement.SceneManager.GetActiveScene().name;
-
             isServer = true;
             serverObject.Start(serverPort, maxServerConnections, sessionName, connectionTimeout);
 
@@ -173,10 +193,7 @@ namespace Multiverse
             if (isClient)
                 return;
 
-            LocateInitialSceneObjects();
-
-            networkSceneName = UnityEngine.SceneManagement.SceneManager.GetActiveScene().name;
-
+            localClientId = ushort.MaxValue;
             isClient = true;
             clientObject.Connect(targetServerAddress, serverPort, sessionName);
 
@@ -188,8 +205,13 @@ namespace Multiverse
             if (!isManagerActive)
                 return;
 
+            localClientId = ushort.MaxValue;
+
             clientObject.Disconnect();
             serverObject.Stop();
+
+            clientOwners.Clear();
+            players.Clear();
 
             CleanNetworkScene();
 
@@ -276,9 +298,18 @@ namespace Multiverse
         private ulong AddPlayer(ushort client)
         {
             ulong owner = nextOwnerId++;
+
+            if (isServer && IsClientLocal(client))
+            {
+                owner = ServerOwnerID;
+            }
+
             serverObject.Send(client, new UMsgSetOwner(owner), NetDeliveryMethod.ReliableOrdered);
 
             players.Add(owner, client);
+            clientOwners.Add(client, owner);
+
+            Debug.Log("AddPlayer client=" + client + ", owner=" + owner);
 
             serverObject.SendToAll(new UMsgAddPlayer(owner, client), Lidgren.Network.NetDeliveryMethod.ReliableOrdered);
 
@@ -287,7 +318,21 @@ namespace Multiverse
 
         private void RemovePlayer(ulong owner)
         {
+            if (!isServer)
+                return;
+
             players.Remove(owner);
+
+            // Remove client to owner
+
+            foreach (var kp in clientOwners)
+            {
+                if (kp.Value == owner)
+                {
+                    clientOwners.Remove(kp.Key);
+                    break;
+                }
+            }
 
             serverObject.SendToAll(new UMsgRemovePlayer(owner), Lidgren.Network.NetDeliveryMethod.ReliableOrdered);
         }
@@ -365,7 +410,7 @@ namespace Multiverse
             if (!isServer)
                 return;
 
-            foreach(var kp in players)
+            foreach (var kp in players)
             {
                 serverObject.Send(newClient, new UMsgAddPlayer(kp.Key, kp.Value), Lidgren.Network.NetDeliveryMethod.ReliableOrdered);
             }
@@ -376,42 +421,48 @@ namespace Multiverse
             }
         }
 
-        private void PrepareNewClient(ushort newClientID)
+        public void OnServerClientConnected(LidgrenServer server, ushort newClientID)
         {
+            if (IsClientLocal(newClientID))
+            {
+                localClientId = newClientID;
+            }
+
             SendSceneStateToClient(newClientID);
 
             ulong owner = AddPlayer(newClientID);
+
             GameObject playerObject = Instantiate(playerPrefab);
             SpawnWithAuthority(playerObject, owner);
 
             serverPlayerObjects.Add(newClientID, playerObject);
         }
 
-        public void OnServerClientConnected(LidgrenServer server, ushort newClientID)
+        public IEnumerable<GameObject> GetOwnedNetworkObjects(ulong owner)
         {
-            if (IsClientLocal(newClientID))
+            List<GameObject> lst = new List<GameObject>();
+
+            foreach (var kp in networkObjects)
             {
-                localClientId = newClientID;
-                PrepareNewClient(newClientID);
+                if (kp.Value.ownerId == owner)
+                    lst.Add(kp.Value.gameObject);
             }
-            else
-            {
-                // Make sure that client has valid scene loaded
-                server.Send(newClientID, new UMsgLoadTargetScene(networkSceneName), NetDeliveryMethod.ReliableOrdered);
-            }
+
+            return lst;
         }
 
         public void OnServerClientDisconnected(LidgrenServer server, ushort leavingClientID)
         {
-            GameObject playerObject = FindPlayerObject(leavingClientID);
+            // Unspawn all owned network objects
+            var objs = GetOwnedNetworkObjects(ClientIdToOwner(leavingClientID));
 
-            if (playerObject != null)
-            {
-                serverPlayerObjects.Remove(leavingClientID);
-                Unspawn(playerObject);
-            }
+            foreach (var obj in objs)
+                Unspawn(obj);
 
-            RemovePlayer(leavingClientID);
+            serverPlayerObjects.Remove(leavingClientID);
+
+            RemovePlayer(ClientIdToOwner(leavingClientID));
+
         }
 
         public void OnServerMessageReceived(LidgrenServer server, ushort sourceClient, Message msg)
@@ -434,19 +485,18 @@ namespace Multiverse
             }
         }
 
-        private void ServerHandleUMsgClientSceneLoaded(Message m)
-        {
-            UMsgClientSceneLoaded msg = m as UMsgClientSceneLoaded;
-
-            PrepareNewClient(msg.sourceClient);
-        }
-
         private void ServerHandleUMsgScriptMessage(Message m)
         {
             UMsgScriptMessage msg = m as UMsgScriptMessage;
-            UNetworkIdentity iden = networkObjects[msg.netid];
+            UNetworkIdentity iden = null;
+
+            networkObjects.TryGetValue(msg.netid, out iden);
+
+            if (iden == null)
+                return;
 
             Message newMsg = serverObject.CreateMessageObject(msg.originalMessageId);
+            newMsg.sourceClient = msg.sourceClient;
 
             NetBuffer buffer = new NetBuffer();
             buffer.Data = msg.messageData;
@@ -462,7 +512,7 @@ namespace Multiverse
 
         public void OnClientConnected(LidgrenClient client)
         {
-
+            Debug.Log("client connected");
         }
 
         public void OnClientDisconnected(LidgrenClient client)
@@ -475,30 +525,12 @@ namespace Multiverse
             clientMessageHandler.HandleMessage(msg);
         }
 
-        private void OnClientSceneLoaded<T0, T1>(T0 arg0, T1 arg1)
-        {
-            UnityEngine.SceneManagement.SceneManager.activeSceneChanged -= OnClientSceneLoaded;
-
-            LocateInitialSceneObjects();
-
-            clientObject.Send(new UMsgClientSceneLoaded(), NetDeliveryMethod.ReliableOrdered);
-        }
-
         private void ClientHandleUMsgLoadTargetScene(Message m)
         {
             if (isServer)
                 return;
 
             UMsgLoadTargetScene msg = m as UMsgLoadTargetScene;
-
-            if(networkSceneName == msg.networkSceneName)
-            {
-                clientObject.Send(new UMsgClientSceneLoaded(), NetDeliveryMethod.ReliableOrdered);
-            }
-            else
-            {
-                UnityEngine.SceneManagement.SceneManager.activeSceneChanged += OnClientSceneLoaded;
-            }
         }
 
         private void ClientHandleUMsgSpawnObject(Message m)
@@ -597,6 +629,8 @@ namespace Multiverse
             UMsgSetOwner msg = m as UMsgSetOwner;
 
             networkOwnerId = msg.owner;
+
+            Debug.Log("networkOwnerId=" + networkOwnerId);
         }
 
         //
@@ -619,6 +653,11 @@ namespace Multiverse
             serverObject.SendToAllExceptOneClient(localClientId, m, Lidgren.Network.NetDeliveryMethod.ReliableOrdered);
         }
 
+        internal void SendMessageToAllClientsExcept(ushort client, Message m)
+        {
+            serverObject.SendToAllExceptOneClient(client, m, Lidgren.Network.NetDeliveryMethod.ReliableOrdered);
+        }
+
         internal void SendMessageToServer(Message msg)
         {
             clientObject.Send(msg, Lidgren.Network.NetDeliveryMethod.ReliableOrdered);
@@ -635,7 +674,7 @@ namespace Multiverse
 
         public virtual void OnStartClient()
         {
-
+            Debug.Log("Client started");
         }
     }
 }

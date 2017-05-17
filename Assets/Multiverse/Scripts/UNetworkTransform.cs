@@ -54,8 +54,10 @@ namespace Multiverse
                 {
                     if (interpolateRigidbody)
                     {
-                        rigid.velocity = movePos - rigid.position;
-                        rigid.angularVelocity = ComputeOmegaVelocity(rigid.rotation, moveRot, 1);
+                        rigid.velocity = (movePos - rigid.position);///Time.deltaTime;
+                        //rigid.MovePosition(movePos);
+                        rigid.MoveRotation(moveRot);
+                        //rigid.angularVelocity = ComputeOmegaVelocity(rigid.rotation, moveRot, Time.deltaTime);
 
                         if(maxPositionError > 0 && (rigid.position - movePos).sqrMagnitude > maxPositionError* maxPositionError)
                         {

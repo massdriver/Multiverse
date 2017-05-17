@@ -109,6 +109,7 @@ namespace Multiverse
 
         public void SendToAllExceptOneClient(ushort exceptThisClient, Message msg, NetDeliveryMethod deliveryType)
         {
+            /*
             NetOutgoingMessage msgOut = netServer.CreateMessage();
 
             msgOut.Write(Message.GetMessageCode(msg.GetType()));
@@ -119,6 +120,13 @@ namespace Multiverse
                 if(clid != exceptThisClient)
                     netServer.SendMessage(msgOut, clientInfo[clid].connection, deliveryType);
             }
+            */
+            NetOutgoingMessage msgOut = netServer.CreateMessage();
+
+            msgOut.Write(Message.GetMessageCode(msg.GetType()));
+            msg.Write(msgOut);
+
+            netServer.SendToAll(msgOut, clientInfo[exceptThisClient].connection, deliveryType, 0);
         }
 
         public void SendToAll(Message msg, NetDeliveryMethod deliveryType)
