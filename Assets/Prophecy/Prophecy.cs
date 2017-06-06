@@ -5,16 +5,131 @@ using UnityEngine;
 
 namespace Prophecy
 {
-    public class InventoryItem
+    public abstract class AssetBase : ScriptableObject
     {
-        public float baseMass;
-        public float baseVolume;
-        public int count;
-        public bool stackable;
-        public GradeType grade;
+        public ulong id { get; private set; }
+        public int index { get; private set; }
+
+        public string nickname;
+
+        public string itemName;
+        public string itemDescription;
     }
 
-    public enum ModuleType
+    public abstract class AssetInventoryItem : AssetBase
+    {
+        public GradeType grade;
+        public float volume;
+        public int maxStack;
+    }
+
+    public abstract class AssetModule : AssetInventoryItem
+    {
+        public float mass;
+        public float durability;
+        public ModuleSize moduleSize;
+
+        public int modSlots;
+        public abstract ModSlotType requiredModType { get; }
+    }
+
+    public enum TurretType
+    {
+        Energy,
+        Projectile,
+        Missile
+    }
+
+    public sealed class AssetModuleTurret : AssetModule
+    {
+        public TurretType turretType;
+
+        public override ModSlotType requiredModType
+        {
+            get
+            {
+                return ModSlotType.Turret;
+            }
+        }
+    }
+
+    public abstract class AssetAmmo : AssetInventoryItem
+    {
+        public bool raycastHit;
+        public float raycastMaxDist;
+
+        public float velocity;
+        public float lifetime;
+
+        public float damageEnergy;
+        public float damageKinetic;
+        public float damageExplosive;
+        public float damageOmni;
+    }
+
+    public abstract class AssetHullModule : AssetModule
+    {
+        [Tooltip("Hull tech defines hull module connections")]
+        public HullTechType hullTechType;
+
+        public GameObject visualPrefab; // requires connection points to be set somehow + collision meshes
+    }
+
+    public sealed class AssetHullModuleCockpit : AssetHullModule
+    {
+        public float maxCargo;
+
+        public override ModSlotType requiredModType
+        {
+            get
+            {
+                return ModSlotType.Cockpit;
+            }
+        }
+    }
+
+    public sealed class AssetHullModuleWing : AssetHullModule
+    {
+        [Range(0.0f, 1.0f)]
+        public float resistEnergy;
+        [Range(0.0f, 1.0f)]
+        public float resistKinetic;
+        [Range(0.0f, 1.0f)]
+        public float resistExplosive;
+
+        public int turretPoints;
+
+        public override ModSlotType requiredModType
+        {
+            get
+            {
+                return ModSlotType.Wing;
+            }
+        }
+    }
+
+    public sealed class AssetHullModuleEngine : AssetHullModule
+    {
+        public float maxSpeed;
+        public float thrust;
+        public float mobility;
+
+        public override ModSlotType requiredModType
+        {
+            get
+            {
+                return ModSlotType.Engine;
+            }
+        }
+    }
+
+    public enum HullTechType
+    {
+        Civilian,
+        PieRat
+    }
+
+    public enum ModSlotType
     {
         Cockpit,
         Turret,
@@ -40,72 +155,6 @@ namespace Prophecy
         Large
     }
 
-    // Base values
-    // Mods
-    // Final values
-
-    public class ItemStatValues
-    {
-        public float mass;
-        public float durability;
-    }
-
-    public abstract class InventoryItemModificator : InventoryItem
-    {
-        public float massReduction;
-        public float durabilityMod;
-    }
-
-    public abstract class InventoryItemModule<StatValueType, ModificatorType> : InventoryItem
-        where StatValueType : ItemStatValues, new()
-        where ModificatorType : InventoryItemModificator
-    {
-        public InventoryItemModule(StatValueType baseValues, IEnumerable<ModificatorType> modificators, ModuleSize moduleSize)
-        {
-            this.moduleSize = moduleSize;
-            this.baseValues = baseValues;
-            this.modificatorList = new List<ModificatorType>(modificators);
-            this.finalValues = ComputeFinalStats(this.baseValues, this.modificatorList);
-        }
-
-        public ModuleType moduleType { get; protected set; }
-        public ModuleSize moduleSize { get; private set; }
-        public StatValueType baseValues { get; private set; }
-        public StatValueType finalValues { get; private set; }
-
-        private List<ModificatorType> modificatorList { get; set; }
-
-        public void AddModificator(ModificatorType mod)
-        {
-            modificatorList.Add(mod);
-            finalValues = ComputeFinalStats(baseValues, modificatorList);
-        }
-
-        public int numModificators { get { return modificatorList.Count; } }
-
-        public void RemoveModificator(int id)
-        {
-            modificatorList.RemoveAt(id);
-            finalValues = ComputeFinalStats(baseValues, modificatorList);
-        }
-
-        public IEnumerable<ModificatorType> modificators { get { return modificatorList; } }
-
-        protected virtual StatValueType ComputeFinalStats(StatValueType baseStats, IEnumerable<ModificatorType> mods)
-        {
-            StatValueType values = new StatValueType();
-
-            values.mass = baseStats.mass;
-            values.durability = baseStats.durability;
-
-            PercentModificator pm = PercentModificator.Default;
-            foreach (var m in mods) { pm.Add(m.massReduction); values.durability += m.durabilityMod; }
-            values.mass *= (1.0f - pm.Value);
-
-            return values;
-        }
-    }
-
     public struct PercentModificator
     {
         public float Value { get; private set; }
@@ -127,42 +176,6 @@ namespace Prophecy
 
             return Value;
         }
-    }
-
-
-    public class ItemStatValuesCockpit : ItemStatValues
-    {
-        public float cargoSpace;
-    }
-
-    public class InventoryItemModificatorCockpit : InventoryItemModificator
-    {
-        public float additionalCargoSpace;
-    }
-
-    public sealed class InventoryItemModuleCockpit : InventoryItemModule<ItemStatValuesCockpit, InventoryItemModificatorCockpit>
-    {
-        public InventoryItemModuleCockpit(ItemStatValuesCockpit baseValues, IEnumerable<InventoryItemModificatorCockpit> modificators, ModuleSize moduleSize) :
-            base(baseValues, modificators, moduleSize)
-        {
-            this.moduleType = ModuleType.Cockpit;
-        }
-
-        protected override ItemStatValuesCockpit ComputeFinalStats(ItemStatValuesCockpit baseStats, IEnumerable<InventoryItemModificatorCockpit> mods)
-        {
-            var stats = base.ComputeFinalStats(baseStats, mods);
-
-            foreach (var m in mods) stats.cargoSpace += m.additionalCargoSpace;
-
-            return stats;
-        }
-    }
-
-    public struct ResistanceValues
-    {
-        public float energy;
-        public float kinetic;
-        public float explosive;
     }
 
     public class Prophecy : MonoBehaviour
