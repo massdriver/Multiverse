@@ -27,7 +27,7 @@ namespace Prophecy
     {
         public float mass;
         public float durability;
-        public ModuleSize moduleSize;
+        public ObjectSize moduleSize;
 
         public int modSlots;
         public abstract ModSlotType requiredModType { get; }
@@ -40,9 +40,38 @@ namespace Prophecy
         Missile
     }
 
+    public enum TurretFireMode
+    {
+        LaunchProjectile,
+        RaycastShot
+    }
+
     public sealed class AssetModuleTurret : AssetModule
     {
         public TurretType turretType;
+        public TurretFireMode fireMode;
+
+        [Range(0.0f,1.0f)]
+        public float dispersion;
+
+        public bool refireRate;
+        public float overloadRefireRateBonus;
+
+        public float overloadHeatGeneration; // per cycle
+        public float maxHeat;
+
+        public float energyPerShot;
+        [Range(0.0f, 1.0f)]
+        public float overloadEnergyConsumptionMod;
+
+        public float reloadTime;
+
+        public int maxAmmo;
+
+        public float trackingSpeed;
+
+        public float damageMultiplier;
+        public float projectileVelocityMod;
 
         public override ModSlotType requiredModType
         {
@@ -53,18 +82,21 @@ namespace Prophecy
         }
     }
 
-    public abstract class AssetAmmo : AssetInventoryItem
+    public sealed class AssetAmmo : AssetInventoryItem
     {
-        public bool raycastHit;
-        public float raycastMaxDist;
+        public ObjectSize requiredTurretSize;
+        public TurretType requiredTurretType;
 
         public float velocity;
+        [Tooltip("In case of RaycastShot this means max ray distance")]
         public float lifetime;
 
         public float damageEnergy;
         public float damageKinetic;
         public float damageExplosive;
         public float damageOmni;
+
+        public GameObject projectilePrefab;
     }
 
     public abstract class AssetHullModule : AssetModule
@@ -90,11 +122,11 @@ namespace Prophecy
 
     public sealed class AssetHullModuleWing : AssetHullModule
     {
-        [Range(0.0f, 1.0f)]
+        [Range(0.0f, 0.99f)]
         public float resistEnergy;
-        [Range(0.0f, 1.0f)]
+        [Range(0.0f, 0.99f)]
         public float resistKinetic;
-        [Range(0.0f, 1.0f)]
+        [Range(0.0f, 0.99f)]
         public float resistExplosive;
 
         public int turretPoints;
@@ -145,10 +177,11 @@ namespace Prophecy
         Common,
         Uncommon,
         Rare,
-        Epic
+        Epic,
+        Premium
     }
 
-    public enum ModuleSize
+    public enum ObjectSize
     {
         Small,
         Medium,
@@ -175,6 +208,122 @@ namespace Prophecy
                 Value = MaxCap;
 
             return Value;
+        }
+    }
+
+    public abstract class HullModuleBase<HullAssetType> : Multiverse.UNetworkBehaviour
+        where HullAssetType : AssetHullModule
+    {
+        public float mass { get; private set; }
+        public float durability { get; private set; }
+        public HullAssetType hullModuleAsset { get; private set; }
+    }
+
+    public sealed class HullModuleCockpit : HullModuleBase<AssetHullModuleCockpit>
+    {
+        public float maxCargoSpace { get; private set; }
+    }
+
+    public sealed class HullModuleWing : HullModuleBase<AssetHullModuleWing>
+    {
+        public float resistEnergy { get; private set; }
+        public float resistKinetic { get; private set; }
+        public float resistExplosive { get; private set; }
+        public int turretPoints { get; private set; }
+    }
+
+    public sealed class HullModuleEngine : HullModuleBase<AssetHullModuleEngine>
+    {
+        public float maxSpeed { get; private set; }
+        public float thrust { get; private set; }
+        public float mobility { get; private set; }
+    }
+
+    public enum SolarEntityType
+    {
+        Static,
+        ModularShip
+    }
+
+    public struct SolarEntityStats
+    {
+        public float mass;
+        public float maxDurability;
+
+        public float resistDurabilityEnergy;
+        public float resistDurabilityKinetic;
+        public float resistDurabilityExplosive;
+
+        public float maxShield;
+        public float regenRateShield;
+
+        public float resistShieldEnergy;
+        public float resistShieldKinetic;
+        public float resistShieldExplosive;
+
+        public float maxSpeed;
+        public float thrust;
+        public float mobility;
+
+        public float regenRateEnergy;
+        public float maxEnergy;
+    }
+
+    public struct SolarEntityOwnerInfo
+    {
+        public ulong ownerId;
+    }
+
+
+    public abstract class SolarEntity : Multiverse.UNetworkBehaviour
+    {
+        public SolarEntityOwnerInfo entityOwner { get; private set; }
+        public string solarName { get; private set; }
+        public abstract SolarEntityType entityType { get; }
+
+        public SolarEntityStats baseStats { get; protected set; }
+        public SolarEntityStats effectiveStats { get; private set; }
+
+        public float mass { get; private set; }
+        public float durability { get; private set; }
+        public float shield { get; private set; }
+        public float energy { get; private set; }
+
+        public ObjectSize objectSize { get; private set; }
+
+        public abstract GameObject ConstructVisualAppearance();
+        public abstract SolarEntityStats ComputeEffectiveStats();
+
+        public void UpdateStats()
+        {
+
+        }
+    }
+
+    public sealed class SolarEntityModularShip : SolarEntity
+    {
+        public HullModuleCockpit moduleCockpit { get; private set; }
+        public HullModuleWing moduleWingLeft { get; private set; }
+        public HullModuleWing moduleWingRight { get; private set; }
+        public HullModuleEngine moduleEngineLeft { get; private set; }
+        public HullModuleEngine moduleEngineRight { get; private set; }
+
+        public override SolarEntityType entityType
+        {
+            get
+            {
+                return SolarEntityType.ModularShip;
+            }
+        }
+
+        public override SolarEntityStats ComputeEffectiveStats()
+        {
+            throw new NotImplementedException();
+        }
+
+        public override GameObject ConstructVisualAppearance()
+        {
+            throw new NotImplementedException();
         }
     }
 
